@@ -38,6 +38,38 @@ class Member:
         return hash(self.unique_name)
 
 
+class CalculatedMember(Member):
+    def __init__(self, dimension: str, hierarchy: str, element: str, calculation: str):
+        super(CalculatedMember, self).__init__(dimension, hierarchy, element)
+        self.calculation = calculation
+
+    @staticmethod
+    def avg(dimension: str, hierarchy: str, element: str, cube: str, mdx_set: 'MdxHierarchySet',
+            mdx_tuple: 'MdxTuple'):
+        calculation = f"AVG({mdx_set.to_mdx()},[{cube}].{mdx_tuple.to_mdx()})"
+        return CalculatedMember(dimension, hierarchy, element, calculation)
+
+    @staticmethod
+    def sum(dimension: str, hierarchy: str, element: str, cube: str, mdx_set: 'MdxHierarchySet',
+            mdx_tuple: 'MdxTuple'):
+        calculation = f"SUM({mdx_set.to_mdx()},[{cube}].{mdx_tuple.to_mdx()})"
+        return CalculatedMember(dimension, hierarchy, element, calculation)
+
+    @staticmethod
+    def lookup(dimension: str, hierarchy: str, element: str, cube: str, mdx_tuple: 'MdxTuple'):
+        calculation = f"[{cube}].{mdx_tuple.to_mdx()}"
+        return CalculatedMember(dimension, hierarchy, element, calculation)
+
+    @staticmethod
+    def lookup_attribute(dimension: str, hierarchy: str, element: str, attribute_dimension: str, attribute: str):
+        attribute_cube = ELEMENT_ATTRIBUTE_PREFIX + attribute_dimension
+        calculation = f"[{attribute_cube}].([{attribute_cube}].[{attribute}])"
+        return CalculatedMember(dimension, hierarchy, element, calculation)
+
+    def to_mdx(self):
+        return f"MEMBER {self.unique_name} AS {self.calculation}"
+
+
 class MdxTuple:
 
     def __init__(self, members):
@@ -150,6 +182,10 @@ class MdxHierarchySet:
 
     def filter_by_cell_value(self, cube: str, mdx_tuple: MdxTuple, operator: str, value) -> 'MdxHierarchySet':
         return FilterByCellValueHierarchySet(self, cube, mdx_tuple, operator, value)
+
+    def filter_by_instr(self, cube: str, mdx_tuple: MdxTuple, substring: str, operator: str = ">", position: int = "0",
+                        case_insensitive=True):
+        return FilterByInstr(self, cube, mdx_tuple, substring, operator, position, case_insensitive)
 
     def tm1_sort(self, ascending=True) -> 'MdxHierarchySet':
         return Tm1SortHierarchySet(self, ascending)
@@ -396,6 +432,27 @@ class FilterByCellValueHierarchySet(MdxHierarchySet):
         return f"{{FILTER({self.underlying_hierarchy_set.to_mdx()},[{self.cube}].{self.mdx_tuple.to_mdx()}{self.operator}{adjusted_value})}}"
 
 
+class FilterByInstr(MdxHierarchySet):
+
+    def __init__(self, underlying_hierarchy_set, cube: str, mdx_tuple: MdxTuple, substring: str, operator: str = ">",
+                 position: int = "0", case_insensitive=True):
+        super(FilterByInstr, self).__init__(
+            underlying_hierarchy_set.dimension,
+            underlying_hierarchy_set.hierarchy)
+        self.underlying_hierarchy_set = underlying_hierarchy_set
+        self.cube = normalize(cube)
+        self.mdx_tuple = mdx_tuple
+        self.substring = substring.upper() if case_insensitive else substring
+        self.operator = operator
+        self.position = position
+        self.case_insensitive = case_insensitive
+
+    def to_mdx(self) -> str:
+        return f"{{FILTER({self.underlying_hierarchy_set.to_mdx()},INSTR({'UCASE(' if self.case_insensitive else ''}" \
+               f"[{self.cube}].{self.mdx_tuple.to_mdx()}{')' if self.case_insensitive else ''},'{self.substring}')" \
+               f"{self.operator}{self.position})}}"
+
+
 class OrderByCellValueHierarchySet(MdxHierarchySet):
 
     def __init__(self, underlying_hierarchy_set: MdxHierarchySet, cube: str, mdx_tuple: MdxTuple):
@@ -565,10 +622,15 @@ class MdxBuilder:
         self.cube = normalize(cube)
         self.axes = {0: MdxAxis.empty()}
         self.where = MdxTuple.empty()
+        self.calculated_members = list()
 
     @staticmethod
     def from_cube(cube: str) -> 'MdxBuilder':
         return MdxBuilder(cube)
+
+    def add_calculated_member(self, member: CalculatedMember):
+        self.calculated_members.append(member)
+        return self
 
     def columns_non_empty(self) -> 'MdxBuilder':
         return self.axis_non_empty(0)
@@ -622,9 +684,16 @@ class MdxBuilder:
         return self
 
     def to_mdx(self) -> str:
-        mdx_axes = ",".join(
+        mdx_with = "WITH \r\n" + "\r\n".join(
+            calculated_member.to_mdx()
+            for calculated_member
+            in self.calculated_members) + "\r\n"
+
+        mdx_axes = ",\r\n".join(
             f"{'' if axis.is_empty() else (axis.to_mdx() + ' ON ' + str(position))}"
             for position, axis
             in self.axes.items())
 
-        return f"""SELECT {mdx_axes} FROM [{self.cube}] {"WHERE " + self.where.to_mdx() if not self.where.is_empty() else ""}"""
+        mdx_where = "\r\nWHERE " + self.where.to_mdx() if not self.where.is_empty() else ""
+
+        return f"""{mdx_with if self.calculated_members else ""}SELECT\r\n{mdx_axes}\r\nFROM [{self.cube}]{mdx_where}"""

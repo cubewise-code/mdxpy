@@ -8,6 +8,14 @@ from mdx import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder
 
 class Test(unittest.TestCase):
 
+    def test_normalize_simple(self):
+        value = normalize("ele ment")
+        self.assertEqual(value, "ELEMENT")
+
+    def test_normalize_escape_bracket(self):
+        value = normalize("ele me]nt")
+        self.assertEqual(value, "ELEME]]NT")
+
     def test_member_of(self):
         dimension_element = Member.of("Dimension", "Element")
         self.assertEqual(dimension_element.dimension, "Dimension")
@@ -20,21 +28,29 @@ class Test(unittest.TestCase):
         self.assertEqual(dimension_element.hierarchy, "Hierarchy")
         self.assertEqual(dimension_element.element, "Element")
 
-    def test_of_error(self):
+    def test_member_of_error(self):
         with pytest.raises(ValueError):
             Member.of("Dim")
 
-    def test_unique_name_without_hierarchy(self):
+    def test_member_unique_name_without_hierarchy(self):
         element = Member.of("Dim", "Elem")
         self.assertEqual(element.unique_name, "[DIM].[DIM].[ELEM]")
 
-    def test_unique_name_with_hierarchy(self):
+    def test_member_unique_name_with_hierarchy(self):
         element = Member.of("Dim", "Hier", "Elem")
         self.assertEqual(element.unique_name, "[DIM].[HIER].[ELEM]")
 
-    def test_normalize_simple(self):
-        value = normalize("ele ment")
-        self.assertEqual(value, "ELEMENT")
+    def test_calculated_member_avg(self):
+        raise NotImplementedError
+
+    def test_calculated_member_sum(self):
+        raise NotImplementedError
+
+    def test_calculated_member_lookup(self):
+        raise NotImplementedError
+
+    def test_calculated_member_lookup_attribute(self):
+        raise NotImplementedError
 
     def test_mdx_tuple_empty(self):
         tupl = MdxTuple.empty()
@@ -324,10 +340,10 @@ class Test(unittest.TestCase):
             .to_mdx()
 
         self.assertEqual(
-            "SELECT "
-            "NON EMPTY {[DIM2].[DIM2].[ELEM2]} ON 0,"
-            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([DIM1].[DIM1])},0)} ON 1 "
-            "FROM [CUBE] "
+            "SELECT\r\n"
+            "NON EMPTY {[DIM2].[DIM2].[ELEM2]} ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([DIM1].[DIM1])},0)} ON 1\r\n"
+            "FROM [CUBE]\r\n"
             "WHERE ([DIM3].[DIM3].[ELEM3],[DIM4].[DIM4].[ELEM4])",
             mdx)
 
@@ -337,9 +353,9 @@ class Test(unittest.TestCase):
             .to_mdx()
 
         self.assertEqual(
-            "SELECT "
-            "{[DIM1].[DIM1].[ELEM1]} ON 0 "
-            "FROM [CUBE] ",
+            "SELECT\r\n"
+            "{[DIM1].[DIM1].[ELEM1]} ON 0\r\n"
+            "FROM [CUBE]",
             mdx)
 
     def test_mdx_builder_multi_axes(self):
@@ -352,13 +368,13 @@ class Test(unittest.TestCase):
             .to_mdx()
 
         self.assertEqual(
-            "SELECT "
-            "{[DIM1].[DIM1].[ELEM1]} ON 0,"
-            "{[DIM2].[DIM2].[ELEM2]} ON 1,"
-            "{[DIM3].[DIM3].[ELEM3]} ON 2,"
-            "{[DIM4].[DIM4].[ELEM4]} ON 3,"
-            "{[DIM5].[DIM5].[ELEM5]} ON 4 "
-            "FROM [CUBE] ",
+            "SELECT\r\n"
+            "{[DIM1].[DIM1].[ELEM1]} ON 0,\r\n"
+            "{[DIM2].[DIM2].[ELEM2]} ON 1,\r\n"
+            "{[DIM3].[DIM3].[ELEM3]} ON 2,\r\n"
+            "{[DIM4].[DIM4].[ELEM4]} ON 3,\r\n"
+            "{[DIM5].[DIM5].[ELEM5]} ON 4\r\n"
+            "FROM [CUBE]",
             mdx)
 
     def test_mdx_builder_multi_no_where(self):
@@ -370,10 +386,10 @@ class Test(unittest.TestCase):
             .to_mdx()
 
         self.assertEqual(
-            "SELECT "
-            "NON EMPTY {[DIM2].[DIM2].[ELEM2]} ON 0,"
-            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([DIM1].[DIM1])},0)} ON 1 "
-            "FROM [CUBE] ",
+            "SELECT\r\n"
+            "NON EMPTY {[DIM2].[DIM2].[ELEM2]} ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([DIM1].[DIM1])},0)} ON 1\r\n"
+            "FROM [CUBE]",
             mdx)
 
     def test_mdx_builder_multi_fail_combine_sets_tuples_on_axis(self):
@@ -391,3 +407,9 @@ class Test(unittest.TestCase):
                 .add_member_tuple_to_axis(0, Member.of("Dim1", "Dim1", "Elem1")) \
                 .add_hierarchy_set_to_axis(0, MdxHierarchySet.all_leaves("Dim1")) \
                 .to_mdx()
+
+    def test_mdx_builder_with_calculated_member(self):
+        pass
+
+    def test_mdx_build_with_multi_calculated_member(self):
+        pass
