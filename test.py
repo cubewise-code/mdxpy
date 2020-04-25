@@ -3,7 +3,7 @@ import unittest
 import pytest
 from ordered_set import OrderedSet
 
-from mdx import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder
+from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder
 
 
 class Test(unittest.TestCase):

@@ -93,19 +93,25 @@ The `MdxBuilder` is used to build MDX queries. `MdxHierarchySet` or `MdxTuple` a
 ``` python
 >>> query = MdxBuilder.from_cube("Cube").add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Product"))
 >>> print(query.to_mdx())
-SELECT {TM1FILTERBYLEVEL({TM1SUBSETALL([PRODUCT].[PRODUCT])},0)} ON 0 FROM [CUBE] 
+SELECT {TM1FILTERBYLEVEL({TM1SUBSETALL([PRODUCT].[PRODUCT])},0)} ON 0
+FROM [CUBE] 
 
 >>> query = MdxBuilder.from_cube("Cube").add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Product", "Product1")))
 >>> print(query.to_mdx())
-SELECT {[PRODUCT].[PRODUCT].[PRODUCT1]} ON 0 FROM [CUBE] 
+SELECT {[PRODUCT].[PRODUCT].[PRODUCT1]} ON 0
+FROM [CUBE] 
 
 >>> query =  MdxBuilder.from_cube("Cube").add_member_tuple_to_axis(0, Member.of("Product", "Product1"), Member.of("Region", "EMEA"))
 >>> print(query.to_mdx())
-SELECT {([PRODUCT].[PRODUCT].[PRODUCT1],[REGION].[REGION].[EMEA])} ON 0 FROM [CUBE] 
+SELECT
+{([PRODUCT].[PRODUCT].[PRODUCT1],[REGION].[REGION].[EMEA])} ON 0
+FROM [CUBE] 
 
 >>> query = MdxBuilder.from_cube("Cube").columns_non_empty().add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Product", "Product1")))
 >>> print(query.to_mdx())
-SELECT NON EMPTY {[PRODUCT].[PRODUCT].[PRODUCT1]} ON 0 FROM [CUBE]
+SELECT
+NON EMPTY {[PRODUCT].[PRODUCT].[PRODUCT1]} ON 0 
+FROM [CUBE]
 ```
 
 MDX queries can have any number of axes. Axis 0 _(=columns)_ must be defined.
@@ -119,7 +125,41 @@ MDX queries can have any number of axes. Axis 0 _(=columns)_ must be defined.
     .to_mdx()
 
 >>> print(mdx)
-SELECT {[REGION].[REGION].[US]} ON 0,{TM1FILTERBYLEVEL({TM1SUBSETALL([PRODUCT].[PRODUCT])},0)} ON 1,{[VERSION].[VERSION].[ACTUAL]} ON 2,{TM1SUBSETTOSET([TIME].[TIME],'2020-Q1')} ON 3 FROM [CUBE] 
+SELECT
+{[REGION].[REGION].[US]} ON 0,
+{TM1FILTERBYLEVEL({TM1SUBSETALL([PRODUCT].[PRODUCT])},0)} ON 1,
+{[VERSION].[VERSION].[ACTUAL]} ON 2,
+{TM1SUBSETTOSET([TIME].[TIME],'2020-Q1')} ON 3
+FROM [CUBE]
+```
+
+The `CalculatedMember` class is used to define query-scoped calculated members. They are used with the `MdxBuilder` through the `add_calculated_member` function.
+
+``` python
+>>> mdx = MdxBuilder.from_cube(cube="Record Rating").add_calculated_member(
+        CalculatedMember.avg(
+            dimension="Period",
+            hierarchy="Period",
+            element="AVG 2016",
+            cube="Record Rating",
+            mdx_set=MdxHierarchySet.children(member=Member.of("Period", "2016")),
+            mdx_tuple=MdxTuple.of(Member.of("Chart", "Total Charts"), Member.of("Record Rating Measure", "Rating")))) \
+        .add_hierarchy_set_to_row_axis(
+        MdxHierarchySet
+            .children(Member.of("Record", "Total Records"))
+            .top_count(cube="Record Rating", mdx_tuple=MdxTuple.of(Member.of("Period", "AVG 2016")), top=5)) \
+        .add_member_tuple_to_columns(Member.of("Period", "AVG 2016")) \
+        .add_members_to_where(Member.of("Chart", "Total Charts"), Member.of("Record Rating Measure", "Rating")) \
+        .to_mdx()
+
+>>> print(mdx)
+WITH 
+MEMBER [PERIOD].[PERIOD].[AVG2016] AS AVG({[PERIOD].[PERIOD].[2016].CHILDREN},[Record Rating].([CHART].[CHART].[TOTALCHARTS],[RECORDRATINGMEASURE].[RECORDRATINGMEASURE].[RATING]))
+SELECT
+{([PERIOD].[PERIOD].[AVG2016])} ON 0,
+{TOPCOUNT({[RECORD].[RECORD].[TOTALRECORDS].CHILDREN},5,[RECORDRATING].([PERIOD].[PERIOD].[AVG2016]))} ON 1
+FROM [RECORDRATING]
+WHERE ([CHART].[CHART].[TOTALCHARTS],[RECORDRATINGMEASURE].[RECORDRATINGMEASURE].[RATING])
 ```
 
 To see all samples checkout the `test.py` file
