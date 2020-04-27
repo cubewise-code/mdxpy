@@ -2,6 +2,10 @@
 
 A simple, yet elegant MDX library for TM1
 
+## Install
+
+    pip install TM1py
+
 ## Usage
 
 Create MDX queries programmatically with the `Member`, `MdxTuple`, `MdxHierarchySet`, `MdxBuilder` classes.

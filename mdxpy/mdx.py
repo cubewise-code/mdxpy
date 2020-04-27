@@ -218,6 +218,9 @@ class MdxHierarchySet:
     def order(self, cube, mdx_tuple) -> 'MdxHierarchySet':
         return OrderByCellValueHierarchySet(self, cube, mdx_tuple)
 
+    def generate_attribute_to_member(self, attribute: str, dimension: str, hierarchy: str = None):
+        return GenerateAttributeToMemberSet(self, attribute, dimension, hierarchy)
+
 
 class Tm1SubsetAllHierarchySet(MdxHierarchySet):
 
@@ -574,6 +577,22 @@ class BottomCountHierarchySet(MdxHierarchySet):
 
     def to_mdx(self) -> str:
         return f"{{BOTTOMCOUNT({self.underlying_hierarchy_set.to_mdx()},{self.top},[{self.cube}].{self.mdx_tuple.to_mdx()})}}"
+
+
+class GenerateAttributeToMemberSet(MdxHierarchySet):
+
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, attribute: str, dimension: str, hierarchy: str):
+        super(GenerateAttributeToMemberSet, self).__init__(
+            underlying_hierarchy_set.dimension,
+            underlying_hierarchy_set.hierarchy)
+        self.underlying_hierarchy_set = underlying_hierarchy_set
+        self.dimension = dimension
+        self.hierarchy = hierarchy if hierarchy else dimension
+        self.attribute = attribute
+
+    def to_mdx(self) -> str:
+        return f"{{GENERATE({self.underlying_hierarchy_set.to_mdx()}, " \
+               f"{{STRTOMEMBER('[{self.dimension}].[{self.hierarchy}].[' + [{self.underlying_hierarchy_set.dimension}].[{self.underlying_hierarchy_set.hierarchy}].CURRENTMEMBER.PROPERTIES(\"{self.attribute}\") + ']')}})}}"
 
 
 class MdxAxis:

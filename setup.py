@@ -4,7 +4,7 @@ DESCRIPTION = open('readme.md').read()
 
 setup(
     name="mdxpy",
-    version='0.1',
+    version='0.2',
     maintainer='Marius Wirtz',
     maintainer_email='MWirtz@cubewise.com',
     license="MIT-LICENSE",
