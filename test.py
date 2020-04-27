@@ -3,7 +3,7 @@ import unittest
 import pytest
 from ordered_set import OrderedSet
 
-from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder
+from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember
 
 
 class Test(unittest.TestCase):
@@ -41,16 +41,58 @@ class Test(unittest.TestCase):
         self.assertEqual(element.unique_name, "[DIM].[HIER].[ELEM]")
 
     def test_calculated_member_avg(self):
-        raise NotImplementedError
+        calculated_member = CalculatedMember.avg(
+            dimension="Period",
+            hierarchy="Period",
+            element="AVG 2016",
+            cube="Cube",
+            mdx_set=MdxHierarchySet.children(Member.of("Period", "2016")),
+            mdx_tuple=MdxTuple.of(Member.of("Dimension1", "Element1"), Member.of("Dimension2", "Element2")))
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [PERIOD].[PERIOD].[AVG2016] AS AVG({[PERIOD].[PERIOD].[2016].CHILDREN},[CUBE]."
+            "([DIMENSION1].[DIMENSION1].[ELEMENT1],[DIMENSION2].[DIMENSION2].[ELEMENT2]))")
 
     def test_calculated_member_sum(self):
-        raise NotImplementedError
+        calculated_member = CalculatedMember.sum(
+            dimension="Period",
+            hierarchy="Period",
+            element="SUM 2016",
+            cube="Cube",
+            mdx_set=MdxHierarchySet.children(Member.of("Period", "2016")),
+            mdx_tuple=MdxTuple.of(Member.of("Dimension1", "Element1"), Member.of("Dimension2", "Element2")))
 
-    def test_calculated_member_lookup(self):
-        raise NotImplementedError
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [PERIOD].[PERIOD].[SUM2016] AS SUM({[PERIOD].[PERIOD].[2016].CHILDREN},[CUBE]."
+            "([DIMENSION1].[DIMENSION1].[ELEMENT1],[DIMENSION2].[DIMENSION2].[ELEMENT2]))")
 
     def test_calculated_member_lookup_attribute(self):
-        raise NotImplementedError
+        calculated_member = CalculatedMember.lookup_attribute(
+            dimension="Period",
+            hierarchy="Period",
+            element="VersionAttribute1",
+            attribute_dimension="Version",
+            attribute="Attribute1")
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [PERIOD].[PERIOD].[VERSIONATTRIBUTE1] AS [}ELEMENTATTRIBUTES_VERSION]."
+            "([}ELEMENTATTRIBUTES_VERSION].[ATTRIBUTE1])")
+
+    def test_calculated_member_lookup(self):
+        calculated_member = CalculatedMember.lookup(
+            "Period",
+            "Period",
+            "VersionAttribute1",
+            cube="}ElementAttributes_Version",
+            mdx_tuple=MdxTuple.of(Member.of("}ElementAttributes_Version", "Attribute1")))
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [PERIOD].[PERIOD].[VERSIONATTRIBUTE1] AS [}ELEMENTATTRIBUTES_VERSION]."
+            "([}ELEMENTATTRIBUTES_VERSION].[}ELEMENTATTRIBUTES_VERSION].[ATTRIBUTE1])")
 
     def test_mdx_tuple_empty(self):
         tupl = MdxTuple.empty()
@@ -101,7 +143,9 @@ class Test(unittest.TestCase):
     def test_mdx_hierarchy_set_all_consolidations(self):
         hierarchy_set = MdxHierarchySet.all_consolidations("Dimension")
         self.assertEqual(
-            "{EXCEPT({TM1SUBSETALL([DIMENSION].[DIMENSION])},{TM1FILTERBYLEVEL({TM1SUBSETALL([DIMENSION].[DIMENSION])},0)})}",
+            "{EXCEPT("
+            "{TM1SUBSETALL([DIMENSION].[DIMENSION])},"
+            "{TM1FILTERBYLEVEL({TM1SUBSETALL([DIMENSION].[DIMENSION])},0)})}",
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_all_leaves(self):
@@ -330,6 +374,17 @@ class Test(unittest.TestCase):
             "[CUBE].([DIMENSION2].[HIERARCHY2].[ELEMENTA],[DIMENSION3].[HIERARCHY3].[ELEMENTB]))}",
             hierarchy_set.to_mdx())
 
+    def test_mdx_hierarchy_set_generate_attribute_to_member(self):
+        hierarchy_set = MdxHierarchySet.all_leaves("Store").generate_attribute_to_member("Manager", "Manager")
+
+        self.assertEqual(hierarchy_set.dimension, "MANAGER")
+
+        self.assertEqual(
+            "{GENERATE("
+            "{TM1FILTERBYLEVEL({TM1SUBSETALL([STORE].[STORE])},0)},"
+            "{STRTOMEMBER('[MANAGER].[MANAGER].[' + [STORE].[STORE].CURRENTMEMBER.PROPERTIES(\"Manager\") + ']')})}",
+            hierarchy_set.to_mdx())
+
     def test_mdx_builder_simple(self):
         mdx = MdxBuilder.from_cube("CUBE") \
             .rows_non_empty() \
@@ -409,7 +464,66 @@ class Test(unittest.TestCase):
                 .to_mdx()
 
     def test_mdx_builder_with_calculated_member(self):
-        pass
+        mdx = MdxBuilder.from_cube(cube="Cube").add_calculated_member(
+            CalculatedMember.avg(
+                dimension="Period",
+                hierarchy="Period",
+                element="AVG 2016",
+                cube="Cube",
+                mdx_set=MdxHierarchySet.children(member=Member.of("Period", "2016")),
+                mdx_tuple=MdxTuple.of(Member.of("Dim1", "Total Dim1"),
+                                      Member.of("Dim2", "Total Dim2")))) \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("DIM1", "DIM1")) \
+            .columns_non_empty() \
+            .add_member_tuple_to_columns(Member.of("Period", "AVG 2016")) \
+            .add_members_to_where(Member.of("Dim2", "Total Dim2")) \
+            .to_mdx()
+
+        self.assertEqual(
+            "WITH\r\n"
+            "MEMBER [PERIOD].[PERIOD].[AVG2016] AS AVG({[PERIOD].[PERIOD].[2016].CHILDREN},[CUBE].([DIM1].[DIM1].[TOTALDIM1],[DIM2].[DIM2].[TOTALDIM2]))\r\n"
+            "SELECT\r\n"
+            "NON EMPTY {([PERIOD].[PERIOD].[AVG2016])} ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([DIM1].[DIM1])},0)} ON 1\r\n"
+            "FROM [CUBE]\r\n"
+            "WHERE ([DIM2].[DIM2].[TOTALDIM2])",
+            mdx)
 
     def test_mdx_build_with_multi_calculated_member(self):
-        pass
+        mdx = MdxBuilder.from_cube(cube="Cube").add_calculated_member(
+            CalculatedMember.avg(
+                dimension="Period",
+                hierarchy="Period",
+                element="AVG 2016",
+                cube="Cube",
+                mdx_set=MdxHierarchySet.children(member=Member.of("Period", "2016")),
+                mdx_tuple=MdxTuple.of(Member.of("Dim1", "Total Dim1"),
+                                      Member.of("Dim2", "Total Dim2")))) \
+            .add_calculated_member(
+            CalculatedMember.sum(
+                dimension="Period",
+                hierarchy="Period",
+                element="SUM 2016",
+                cube="Cube",
+                mdx_set=MdxHierarchySet.children(member=Member.of("Period", "2016")),
+                mdx_tuple=MdxTuple.of(Member.of("Dim1", "Total Dim1"),
+                                      Member.of("Dim2", "Total Dim2")))) \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("DIM1", "DIM1")) \
+            .columns_non_empty() \
+            .add_hierarchy_set_to_column_axis(
+            MdxHierarchySet.members(members=[Member.of("Period", "AVG 2016"), Member.of("Period", "SUM 2016")])) \
+            .add_members_to_where(Member.of("Dim2", "Total Dim2")) \
+            .to_mdx()
+
+        self.assertEqual(
+            "WITH\r\n"
+            "MEMBER [PERIOD].[PERIOD].[AVG2016] AS AVG({[PERIOD].[PERIOD].[2016].CHILDREN},[CUBE].([DIM1].[DIM1].[TOTALDIM1],[DIM2].[DIM2].[TOTALDIM2]))\r\n"
+            "MEMBER [PERIOD].[PERIOD].[SUM2016] AS SUM({[PERIOD].[PERIOD].[2016].CHILDREN},[CUBE].([DIM1].[DIM1].[TOTALDIM1],[DIM2].[DIM2].[TOTALDIM2]))\r\n"
+            "SELECT\r\n"
+            "NON EMPTY {[PERIOD].[PERIOD].[AVG2016],[PERIOD].[PERIOD].[SUM2016]} ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([DIM1].[DIM1])},0)} ON 1\r\n"
+            "FROM [CUBE]\r\n"
+            "WHERE ([DIM2].[DIM2].[TOTALDIM2])",
+            mdx)

@@ -46,24 +46,24 @@ class CalculatedMember(Member):
     @staticmethod
     def avg(dimension: str, hierarchy: str, element: str, cube: str, mdx_set: 'MdxHierarchySet',
             mdx_tuple: 'MdxTuple'):
-        calculation = f"AVG({mdx_set.to_mdx()},[{cube}].{mdx_tuple.to_mdx()})"
+        calculation = f"AVG({mdx_set.to_mdx()},[{cube.upper()}].{mdx_tuple.to_mdx()})"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     @staticmethod
     def sum(dimension: str, hierarchy: str, element: str, cube: str, mdx_set: 'MdxHierarchySet',
             mdx_tuple: 'MdxTuple'):
-        calculation = f"SUM({mdx_set.to_mdx()},[{cube}].{mdx_tuple.to_mdx()})"
+        calculation = f"SUM({mdx_set.to_mdx()},[{cube.upper()}].{mdx_tuple.to_mdx()})"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     @staticmethod
     def lookup(dimension: str, hierarchy: str, element: str, cube: str, mdx_tuple: 'MdxTuple'):
-        calculation = f"[{cube}].{mdx_tuple.to_mdx()}"
+        calculation = f"[{cube.upper()}].{mdx_tuple.to_mdx()}"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     @staticmethod
     def lookup_attribute(dimension: str, hierarchy: str, element: str, attribute_dimension: str, attribute: str):
-        attribute_cube = ELEMENT_ATTRIBUTE_PREFIX + attribute_dimension
-        calculation = f"[{attribute_cube}].([{attribute_cube}].[{attribute}])"
+        attribute_cube = ELEMENT_ATTRIBUTE_PREFIX + attribute_dimension.upper()
+        calculation = f"[{attribute_cube}].([{attribute_cube}].[{attribute.upper()}])"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     def to_mdx(self):
@@ -586,12 +586,12 @@ class GenerateAttributeToMemberSet(MdxHierarchySet):
             underlying_hierarchy_set.dimension,
             underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
-        self.dimension = dimension
-        self.hierarchy = hierarchy if hierarchy else dimension
+        self.dimension = dimension.upper()
+        self.hierarchy = hierarchy.upper() if hierarchy else self.dimension
         self.attribute = attribute
 
     def to_mdx(self) -> str:
-        return f"{{GENERATE({self.underlying_hierarchy_set.to_mdx()}, " \
+        return f"{{GENERATE({self.underlying_hierarchy_set.to_mdx()}," \
                f"{{STRTOMEMBER('[{self.dimension}].[{self.hierarchy}].[' + [{self.underlying_hierarchy_set.dimension}].[{self.underlying_hierarchy_set.hierarchy}].CURRENTMEMBER.PROPERTIES(\"{self.attribute}\") + ']')}})}}"
 
 
@@ -703,7 +703,7 @@ class MdxBuilder:
         return self
 
     def to_mdx(self) -> str:
-        mdx_with = "WITH \r\n" + "\r\n".join(
+        mdx_with = "WITH\r\n" + "\r\n".join(
             calculated_member.to_mdx()
             for calculated_member
             in self.calculated_members) + "\r\n"
