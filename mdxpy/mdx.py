@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from ordered_set import OrderedSet
 
@@ -23,13 +23,42 @@ class Member:
         return f"[{normalize(dimension)}].[{normalize(hierarchy)}].[{normalize(element)}]"
 
     @staticmethod
+    def from_unique_name(unique_name: str) -> 'Member':
+        dimension = Member.dimension_name_from_unique_name(unique_name)
+        element = Member.element_name_from_unique_name(unique_name)
+        if unique_name.count("].[") == 1:
+            return Member(dimension, dimension, element)
+
+        elif unique_name.count("].[") == 2:
+            hierarchy = Member.hierarchy_name_from_unique_name(unique_name)
+            return Member(dimension, hierarchy, element)
+
+        else:
+            raise ValueError(f"Argument '{unique_name}' must be a valid member unique name")
+
+    @staticmethod
     def of(*args: str) -> 'Member':
-        if len(args) == 2:
+        # case: '[dim].[elem]'
+        if len(args) == 1:
+            return Member.from_unique_name(args[0])
+        elif len(args) == 2:
             return Member(args[0], args[0], args[1])
         elif len(args) == 3:
             return Member(*args)
         else:
-            raise ValueError("method takes either two or three arguments")
+            raise ValueError("method takes either one, two or three str arguments")
+
+    @staticmethod
+    def dimension_name_from_unique_name(element_unique_name: str) -> str:
+        return element_unique_name[1:element_unique_name.find('].[')]
+
+    @staticmethod
+    def hierarchy_name_from_unique_name(element_unique_name: str) -> str:
+        return element_unique_name[element_unique_name.find('].[') + 3:element_unique_name.rfind('].[')]
+
+    @staticmethod
+    def element_name_from_unique_name(element_unique_name: str) -> str:
+        return element_unique_name[element_unique_name.rfind('].[') + 3:-1]
 
     def __eq__(self, other) -> bool:
         return self.unique_name == other.unique_name
@@ -76,15 +105,21 @@ class MdxTuple:
         self.members = OrderedSet(members)
 
     @staticmethod
-    def of(*args: Member) -> 'MdxTuple':
-        mdx_tuple = MdxTuple(args)
+    def of(*args: Union[str, Member]) -> 'MdxTuple':
+        # handle unique element names
+        members = [Member.of(member)
+                   if isinstance(member, str) else member
+                   for member in args]
+        mdx_tuple = MdxTuple(members)
         return mdx_tuple
 
     @staticmethod
     def empty() -> 'MdxTuple':
         return MdxTuple.of()
 
-    def add_member(self, member: Member):
+    def add_member(self, member: Union[str, Member]):
+        if isinstance(member, str):
+            member = Member.of(member)
         self.members.add(member)
 
     def is_empty(self) -> bool:
@@ -132,43 +167,65 @@ class MdxHierarchySet:
         return DefaultMemberHierarchySet(dimension, hierarchy)
 
     @staticmethod
-    def member(member: Member) -> 'MdxHierarchySet':
+    def member(member: Union[str, Member]) -> 'MdxHierarchySet':
+        if isinstance(member, str):
+            member = Member.of(member)
         return ElementsHierarchySet(member)
 
     @staticmethod
-    def members(members: List[Member]) -> 'MdxHierarchySet':
+    def members(members: List[Union[str, Member]]) -> 'MdxHierarchySet':
+        members = [
+            Member.of(member)
+            if isinstance(member, str) else member
+            for member in members]
         return ElementsHierarchySet(*members)
 
     @staticmethod
-    def parent(member: Member) -> 'MdxHierarchySet':
+    def parent(member: Union[str, Member]) -> 'MdxHierarchySet':
+        if isinstance(member, str):
+            member = Member.of(member)
         return ParentHierarchySet(member)
 
     @staticmethod
-    def first_child(member: Member) -> 'MdxHierarchySet':
+    def first_child(member: Union[str, Member]) -> 'MdxHierarchySet':
+        if isinstance(member, str):
+            member = Member.of(member)
         return FirstChildHierarchySet(member)
 
     @staticmethod
-    def last_child(member: Member) -> 'MdxHierarchySet':
+    def last_child(member: Union[str, Member]) -> 'MdxHierarchySet':
+        if isinstance(member, str):
+            member = Member.of(member)
         return LastChildHierarchySet(member)
 
     @staticmethod
-    def children(member: Member) -> 'MdxHierarchySet':
+    def children(member: Union[str, Member]) -> 'MdxHierarchySet':
+        if isinstance(member, str):
+            member = Member.of(member)
         return ChildrenHierarchySet(member)
 
     @staticmethod
-    def ancestors(member: Member) -> 'MdxHierarchySet':
+    def ancestors(member: Union[str, Member]) -> 'MdxHierarchySet':
+        if isinstance(member, str):
+            member = Member.of(member)
         return AncestorsHierarchySet(member)
 
     @staticmethod
-    def ancestor(member: Member, ancestor: int) -> 'MdxHierarchySet':
+    def ancestor(member: Union[str, Member], ancestor: int) -> 'MdxHierarchySet':
+        if isinstance(member, str):
+            member = Member.of(member)
         return AncestorHierarchySet(member, ancestor)
 
     @staticmethod
-    def drill_down_level(member: Member) -> 'MdxHierarchySet':
+    def drill_down_level(member: Union[str, Member]) -> 'MdxHierarchySet':
+        if isinstance(member, str):
+            member = Member.of(member)
         return DrillDownLevelHierarchySet(member)
 
     @staticmethod
-    def descendants(member: Member) -> 'MdxHierarchySet':
+    def descendants(member: Union[str, Member]) -> 'MdxHierarchySet':
+        if isinstance(member, str):
+            member = Member.of(member)
         return DescendantsHierarchySet(member)
 
     def filter_by_attribute(self, attribute_name: str, attribute_values: List) -> 'MdxHierarchySet':
@@ -640,14 +697,14 @@ class MdxBuilder:
     def __init__(self, cube: str):
         self.cube = normalize(cube)
         self.axes = {0: MdxAxis.empty()}
-        self.where = MdxTuple.empty()
+        self._where = MdxTuple.empty()
         self.calculated_members = list()
 
     @staticmethod
     def from_cube(cube: str) -> 'MdxBuilder':
         return MdxBuilder(cube)
 
-    def add_calculated_member(self, member: CalculatedMember):
+    def with_member(self, member: CalculatedMember) -> 'MdxBuilder':
         self.calculated_members.append(member)
         return self
 
@@ -664,20 +721,20 @@ class MdxBuilder:
         self.axes[axis].set_non_empty()
         return self
 
-    def _add_tuple_to_axis(self, axis: MdxAxis, *args: Member) -> 'MdxBuilder':
+    def _add_tuple_to_axis(self, axis: MdxAxis, *args: Union[str, Member]) -> 'MdxBuilder':
         mdx_tuple = MdxTuple.of(*args)
         axis.add_tuple(mdx_tuple)
         return self
 
-    def add_member_tuple_to_axis(self, axis: int, *args: Member):
+    def add_member_tuple_to_axis(self, axis: int, *args: Union[str, Member]) -> 'MdxBuilder':
         if axis not in self.axes:
             self.axes[axis] = MdxAxis.empty()
         return self._add_tuple_to_axis(self.axes[axis], *args)
 
-    def add_member_tuple_to_columns(self, *args: Member) -> 'MdxBuilder':
+    def add_member_tuple_to_columns(self, *args: Union[str, Member]) -> 'MdxBuilder':
         return self.add_member_tuple_to_axis(0, *args)
 
-    def add_member_tuple_to_rows(self, *args: Member) -> 'MdxBuilder':
+    def add_member_tuple_to_rows(self, *args: Union[str, Member]) -> 'MdxBuilder':
         return self.add_member_tuple_to_axis(1, *args)
 
     def add_hierarchy_set_to_row_axis(self, mdx_hierarchy_set: MdxHierarchySet) -> 'MdxBuilder':
@@ -693,12 +750,16 @@ class MdxBuilder:
         self.axes[axis].add_dim_set(mdx_hierarchy_set)
         return self
 
-    def add_member_to_where(self, member: Member) -> 'MdxBuilder':
-        self.where.add_member(member)
+    def add_member_to_where(self, member: Union[str, Member]) -> 'MdxBuilder':
+        self._where.add_member(member)
         return self
 
-    def add_members_to_where(self, *args: Member) -> 'MdxBuilder':
+    def where(self, *args: Union[str, Member]) -> 'MdxBuilder':
         for member in args:
+            if isinstance(member, str):
+                member = Member.of(member)
+            if not isinstance(member, Member):
+                raise ValueError(f"Argument '{member}' must be of type str or Member")
             self.add_member_to_where(member)
         return self
 
@@ -713,6 +774,6 @@ class MdxBuilder:
             for position, axis
             in self.axes.items())
 
-        mdx_where = "\r\nWHERE " + self.where.to_mdx() if not self.where.is_empty() else ""
+        mdx_where = "\r\nWHERE " + self._where.to_mdx() if not self._where.is_empty() else ""
 
         return f"""{mdx_with if self.calculated_members else ""}SELECT\r\n{mdx_axes}\r\nFROM [{self.cube}]{mdx_where}"""

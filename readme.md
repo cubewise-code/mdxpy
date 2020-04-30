@@ -4,7 +4,7 @@ A simple, yet elegant MDX library for TM1
 
 ## Install
 
-    pip install TM1py
+    pip install mdxpy
 
 ## Usage
 
@@ -137,10 +137,10 @@ SELECT
 FROM [CUBE]
 ```
 
-The `CalculatedMember` class is used to define query-scoped calculated members. They are used with the `MdxBuilder` through the `add_calculated_member` function.
+The `CalculatedMember` class is used to define query-scoped calculated members. They are used with the `MdxBuilder` through the `with_member` function.
 
 ``` python
->>> mdx = MdxBuilder.from_cube(cube="Record Rating").add_calculated_member(
+>>> mdx = MdxBuilder.from_cube(cube="Record Rating").with_member(
         CalculatedMember.avg(
             dimension="Period",
             hierarchy="Period",
@@ -153,7 +153,7 @@ The `CalculatedMember` class is used to define query-scoped calculated members. 
             .children(Member.of("Record", "Total Records"))
             .top_count(cube="Record Rating", mdx_tuple=MdxTuple.of(Member.of("Period", "AVG 2016")), top=5)) \
         .add_member_tuple_to_columns(Member.of("Period", "AVG 2016")) \
-        .add_members_to_where(Member.of("Chart", "Total Charts"), Member.of("Record Rating Measure", "Rating")) \
+        .where(Member.of("Chart", "Total Charts"), Member.of("Record Rating Measure", "Rating")) \
         .to_mdx()
 
 >>> print(mdx)
