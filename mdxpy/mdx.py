@@ -228,6 +228,10 @@ class MdxHierarchySet:
             member = Member.of(member)
         return DescendantsHierarchySet(member)
 
+    @staticmethod
+    def from_str(dimension: str, hierarchy: str, mdx: str):
+        return StrHierarchySet(dimension, hierarchy, mdx)
+
     def filter_by_attribute(self, attribute_name: str, attribute_values: List) -> 'MdxHierarchySet':
         return FilterByAttributeHierarchySet(self, attribute_name, attribute_values)
 
@@ -426,6 +430,16 @@ class Tm1SubsetToSetHierarchySet(MdxHierarchySet):
 
     def to_mdx(self) -> str:
         return f"{{TM1SUBSETTOSET([{self.dimension}].[{self.hierarchy}],'{self.subset}')}}"
+
+
+class StrHierarchySet(MdxHierarchySet):
+
+    def __init__(self, dimension: str, hierarchy: str, mdx: str):
+        super(StrHierarchySet, self).__init__(dimension, hierarchy)
+        self._mdx = mdx
+
+    def to_mdx(self) -> str:
+        return self._mdx
 
 
 class FilterByAttributeHierarchySet(MdxHierarchySet):
