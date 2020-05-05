@@ -222,6 +222,7 @@ class MdxHierarchySet:
             member = Member.of(member)
         return DrillDownLevelHierarchySet(member)
 
+
     @staticmethod
     def descendants(member: Union[str, Member]) -> 'MdxHierarchySet':
         if isinstance(member, str):
@@ -282,6 +283,8 @@ class MdxHierarchySet:
     def generate_attribute_to_member(self, attribute: str, dimension: str, hierarchy: str = None):
         return GenerateAttributeToMemberSet(self, attribute, dimension, hierarchy)
 
+    def tm1_drill_down_member(self, all:bool = True, other_set:'MdxHierarchySet'=None, recursive:bool = True) -> 'MdxHierarchySet':
+        return Tm1DrillDownMemberSet(self, all, other_set, recursive)
 
 class Tm1SubsetAllHierarchySet(MdxHierarchySet):
 
@@ -401,6 +404,29 @@ class ChildrenHierarchySet(MdxHierarchySet):
 
     def to_mdx(self) -> str:
         return f"{{{self.member.unique_name}.CHILDREN}}"
+
+
+class Tm1DrillDownMemberSet(MdxHierarchySet):
+
+    def __init__(self,underlying_hierarchy_set: MdxHierarchySet, all:bool = True, other_set:'MdxHierarchySet'=None, recursive:bool = True):
+        super(Tm1DrillDownMemberSet, self).__init__(underlying_hierarchy_set.dimension,
+                                                    underlying_hierarchy_set.hierarchy)
+        self.underlying_hierarchy_set = underlying_hierarchy_set
+        if other_set:
+            self.set2 = other_set
+        else:
+            self.set2 = "ALL"
+
+        if recursive:
+            self.recursive = ", RECURSIVE"
+        else:
+            self.recursive = ""
+
+    def to_mdx(self) -> str:
+        if self.set2 == "ALL":
+            return f"{{TM1DRILLDOWNMEMBER({self.underlying_hierarchy_set.to_mdx()}, {self.set2}{self.recursive})}}"
+        else:
+            return f"{{TM1DRILLDOWNMEMBER({self.underlying_hierarchy_set.to_mdx()}, {self.set2.to_mdx()}{self.recursive})}}"
 
 
 class DrillDownLevelHierarchySet(MdxHierarchySet):

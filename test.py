@@ -224,6 +224,37 @@ class Test(unittest.TestCase):
             "{DRILLDOWNLEVEL({[DIMENSION].[DIMENSION].[ELEMENT]})}",
             hierarchy_set.to_mdx())
 
+    def test_mdx_hierarchy_set_tm1_drill_down_member_all_recursive(self):
+        hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(all=True, recursive=True)
+
+        self.assertEqual(
+            "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT]}, ALL, RECURSIVE)}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_tm1_drill_down_member_set_recursive(self):
+
+        hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(
+            other_set=MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]),
+            recursive=True)
+        self.assertEqual(
+            "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT]}, {[DIMENSION].[DIMENSION].[ELEMENT]}, RECURSIVE)}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_tm1_drill_down_member_all(self):
+        hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(all=True, recursive=False)
+
+        self.assertEqual(
+            "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT]}, ALL)}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_tm1_drill_down_member_set(self):
+        hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(
+                                                            other_set=MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")])
+                                                            ,recursive=False)
+        self.assertEqual(
+            "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT]}, {[DIMENSION].[DIMENSION].[ELEMENT]})}",
+            hierarchy_set.to_mdx())
+
     def test_mdx_hierarchy_set_from_str(self):
         hierarchy_set = MdxHierarchySet.from_str(
             dimension="Dimension",
