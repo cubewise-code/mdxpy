@@ -476,6 +476,24 @@ class Test(unittest.TestCase):
             "WHERE ([DIM3].[DIM3].[ELEM3],[DIM4].[DIM4].[ELEM4])",
             mdx)
 
+    def test_mdx_builder_tm1_ignore_bad_tuples(self):
+        mdx = MdxBuilder.from_cube("CUBE") \
+            .tm1_ignore_bad_tuples() \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
+            .columns_non_empty() \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
+            .where(Member.of("Dim3", "Elem3"), Member.of("Dim4", "Elem4")) \
+            .to_mdx()
+
+        self.assertEqual(
+            "SELECT\r\n"
+            "NON EMPTY TM1IGNORE_BADTUPLES {[DIM2].[DIM2].[ELEM2]} ON 0,\r\n"
+            "NON EMPTY TM1IGNORE_BADTUPLES {TM1FILTERBYLEVEL({TM1SUBSETALL([DIM1].[DIM1])},0)} ON 1\r\n"
+            "FROM [CUBE]\r\n"
+            "WHERE ([DIM3].[DIM3].[ELEM3],[DIM4].[DIM4].[ELEM4])",
+            mdx)
+
     def test_mdx_builder_single_axes(self):
         mdx = MdxBuilder.from_cube("CUBE") \
             .add_hierarchy_set_to_axis(0, MdxHierarchySet.member(Member.of("Dim1", "Elem1"))) \
