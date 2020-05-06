@@ -717,14 +717,14 @@ class MdxAxis:
     def is_empty(self) -> bool:
         return not self.dim_sets and not self.tuples
 
-    def set_non_empty(self, non_empty=True):
+    def set_non_empty(self, non_empty: bool = True):
         self.non_empty = non_empty
 
-    def to_mdx(self) -> str:
+    def to_mdx(self, tm1_ignore_bad_tuples=False) -> str:
         if self.is_empty():
             return "{}"
 
-        return f"""{"NON EMPTY " if self.non_empty else ""}{self.dim_sets_to_mdx() if self.dim_sets else self.tuples_to_mdx()}"""
+        return f"""{"NON EMPTY " if self.non_empty else ""}{"TM1IGNORE_BADTUPLES " if tm1_ignore_bad_tuples else ""}{self.dim_sets_to_mdx() if self.dim_sets else self.tuples_to_mdx()}"""
 
     def dim_sets_to_mdx(self) -> str:
         return " * ".join(dim_set.to_mdx() for dim_set in self.dim_sets)
@@ -739,6 +739,7 @@ class MdxBuilder:
         self.axes = {0: MdxAxis.empty()}
         self._where = MdxTuple.empty()
         self.calculated_members = list()
+        self._tm1_ignore_bad_tuples = False
 
     @staticmethod
     def from_cube(cube: str) -> 'MdxBuilder':
@@ -749,16 +750,20 @@ class MdxBuilder:
         return self
 
     def columns_non_empty(self) -> 'MdxBuilder':
-        return self.axis_non_empty(0)
+        return self.non_empty(0)
 
     def rows_non_empty(self) -> 'MdxBuilder':
-        return self.axis_non_empty(1)
+        return self.non_empty(1)
 
-    def axis_non_empty(self, axis: int) -> 'MdxBuilder':
+    def non_empty(self, axis: int) -> 'MdxBuilder':
         if axis not in self.axes:
             self.axes[axis] = MdxAxis.empty()
 
         self.axes[axis].set_non_empty()
+        return self
+
+    def tm1_ignore_bad_tuples(self, ignore=True) -> 'MdxBuilder':
+        self._tm1_ignore_bad_tuples = ignore
         return self
 
     def _add_tuple_to_axis(self, axis: MdxAxis, *args: Union[str, Member]) -> 'MdxBuilder':
@@ -810,7 +815,7 @@ class MdxBuilder:
             in self.calculated_members) + "\r\n"
 
         mdx_axes = ",\r\n".join(
-            f"{'' if axis.is_empty() else (axis.to_mdx() + ' ON ' + str(position))}"
+            f"{'' if axis.is_empty() else (axis.to_mdx(self._tm1_ignore_bad_tuples) + ' ON ' + str(position))}"
             for position, axis
             in self.axes.items())
 
