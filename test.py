@@ -149,7 +149,7 @@ class Test(unittest.TestCase):
     def test_mdx_hierarchy_set_tm1_subset_to_set(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_to_set("Dimension", "Hierarchy", "Default")
         self.assertEqual(
-            "{TM1SUBSETTOSET([DIMENSION].[HIERARCHY],'Default')}",
+            '{TM1SUBSETTOSET([DIMENSION].[HIERARCHY],"Default")}',
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_all_consolidations(self):
@@ -271,13 +271,13 @@ class Test(unittest.TestCase):
 
         self.assertEqual(
             hierarchy_set.to_mdx(),
-            "{FILTER({[DIMENSION].[HIERARCHY].MEMBERS},[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])='Value1')}")
+            '{FILTER({[DIMENSION].[HIERARCHY].MEMBERS},[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])="Value1")}')
 
     def test_mdx_filter_by_attribute_single_string(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_attribute("Attribute1", ["Value1"])
         self.assertEqual(
             "{FILTER({TM1SUBSETALL([DIMENSION].[DIMENSION])},"
-            "[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])='Value1')}",
+            '[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])="Value1")}',
             hierarchy_set.to_mdx())
 
     def test_mdx_filter_by_attribute_single_numeric(self):
@@ -293,10 +293,10 @@ class Test(unittest.TestCase):
                                                                                         ["Value1", 1, 2.0])
 
         self.assertEqual(
-            "{FILTER({TM1SUBSETALL([DIMENSION].[DIMENSION])},"
-            "[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])='Value1' OR "
-            "[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])=1 OR "
-            "[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])=2.0)}",
+            '{FILTER({TM1SUBSETALL([DIMENSION].[DIMENSION])},'
+            '[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])="Value1" OR '
+            '[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])=1 OR '
+            '[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])=2.0)}',
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_filter_by_wildcard(self):
@@ -434,6 +434,16 @@ class Test(unittest.TestCase):
         self.assertEqual(
             "{ORDER({[DIMENSION1].[HIERARCHY1].MEMBERS},"
             "[CUBE].([DIMENSION2].[HIERARCHY2].[ELEMENTA],[DIMENSION3].[HIERARCHY3].[ELEMENTB]))}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_order_by_attribute(self):
+        hierarchy_set = MdxHierarchySet.all_members("Dimension1", "Hierarchy1").order_by_attribute(
+            attribute_name="Attribute1",
+            flag = 'asc')
+
+        self.assertEqual(
+            '{ORDER({[DIMENSION1].[HIERARCHY1].MEMBERS},'
+            '[DIMENSION1].[HIERARCHY1].CURRENTMEMBER.PROPERTIES("ATTRIBUTE1"), ASC)}',
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_generate_attribute_to_member(self):

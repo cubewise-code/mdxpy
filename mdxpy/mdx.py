@@ -583,8 +583,8 @@ class OrderByAttributeValueHierarchySet(MdxHierarchySet):
         super(OrderByAttributeValueHierarchySet, self).__init__(underlying_hierarchy_set.dimension,
                                                            underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
-        self.attribute_name = attribute_name
-        self.flag = flag
+        self.attribute_name = normalize(attribute_name)
+        self.flag = normalize(flag)
 
     def to_mdx(self) -> str:
         return f"{{ORDER({self.underlying_hierarchy_set.to_mdx()},[{self.underlying_hierarchy_set.dimension}].[{self.underlying_hierarchy_set.hierarchy}].CURRENTMEMBER.PROPERTIES(\"{self.attribute_name}\"), {self.flag})}}"
