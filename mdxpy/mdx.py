@@ -1,11 +1,29 @@
+import os
 from abc import abstractmethod
+from enum import Enum
 from typing import List, Optional, Union
 
 from ordered_set import OrderedSet
 
-import os
-
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
+
+
+class Order(Enum):
+    ASC = 1
+    DESC = 2
+    BASC = 3
+    BDESC = 4
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def _missing_(cls, value: str):
+        for member in cls:
+            if member.name.lower() == value.replace(" ", "").lower():
+                return member
+        # default
+        raise ValueError(f"Invalid order type: '{value}'")
 
 
 def normalize(name: str) -> str:
@@ -230,7 +248,6 @@ class MdxHierarchySet:
             member = Member.of(member)
         return DrillDownLevelHierarchySet(member)
 
-
     @staticmethod
     def descendants(member: Union[str, Member]) -> 'MdxHierarchySet':
         if isinstance(member, str):
@@ -241,7 +258,8 @@ class MdxHierarchySet:
     def from_str(dimension: str, hierarchy: str, mdx: str):
         return StrHierarchySet(dimension, hierarchy, mdx)
 
-    def filter_by_attribute(self, attribute_name: str, attribute_values: List, operator:Optional[str] = '=') -> 'MdxHierarchySet':
+    def filter_by_attribute(self, attribute_name: str, attribute_values: List,
+                            operator: Optional[str] = '=') -> 'MdxHierarchySet':
         return FilterByAttributeHierarchySet(self, attribute_name, attribute_values, operator)
 
     def filter_by_pattern(self, wildcard: str) -> 'MdxHierarchySet':
@@ -285,17 +303,19 @@ class MdxHierarchySet:
     def except_(self, other_set: 'MdxHierarchySet') -> 'MdxHierarchySet':
         return ExceptHierarchySet(self, other_set)
 
-    def order(self, cube, mdx_tuple) -> 'MdxHierarchySet':
-        return OrderByCellValueHierarchySet(self, cube, mdx_tuple)
+    def order(self, cube: str, mdx_tuple: MdxTuple, order: Union[str, Order] = Order.BASC) -> 'MdxHierarchySet':
+        return OrderByCellValueHierarchySet(self, cube, mdx_tuple, order)
 
-    def order_by_attribute(self, attribute_name: str, flag: Optional[str] = 'BASC') -> 'MdxHierarchySet':
-        return OrderByAttributeValueHierarchySet(self, attribute_name, flag)
+    def order_by_attribute(self, attribute_name: str, order: Union[Order, str] = Order.BASC) -> 'MdxHierarchySet':
+        return OrderByAttributeValueHierarchySet(self, attribute_name, order)
 
     def generate_attribute_to_member(self, attribute: str, dimension: str, hierarchy: str = None):
         return GenerateAttributeToMemberSet(self, attribute, dimension, hierarchy)
 
-    def tm1_drill_down_member(self, all:bool = True, other_set:'MdxHierarchySet'=None, recursive:bool = True) -> 'MdxHierarchySet':
+    def tm1_drill_down_member(self, all: bool = True, other_set: 'MdxHierarchySet' = None,
+                              recursive: bool = True) -> 'MdxHierarchySet':
         return Tm1DrillDownMemberSet(self, all, other_set, recursive)
+
 
 class Tm1SubsetAllHierarchySet(MdxHierarchySet):
 
@@ -419,7 +439,8 @@ class ChildrenHierarchySet(MdxHierarchySet):
 
 class Tm1DrillDownMemberSet(MdxHierarchySet):
 
-    def __init__(self,underlying_hierarchy_set: MdxHierarchySet, all:bool = True, other_set:'MdxHierarchySet'=None, recursive:bool = True):
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, all: bool = True, other_set: 'MdxHierarchySet' = None,
+                 recursive: bool = True):
         super(Tm1DrillDownMemberSet, self).__init__(underlying_hierarchy_set.dimension,
                                                     underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
@@ -481,7 +502,8 @@ class StrHierarchySet(MdxHierarchySet):
 
 class FilterByAttributeHierarchySet(MdxHierarchySet):
 
-    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, attribute_name: str, attribute_values: List[str], operator: str = '='):
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, attribute_name: str, attribute_values: List[str],
+                 operator: str = '='):
         super(FilterByAttributeHierarchySet, self).__init__(underlying_hierarchy_set.dimension,
                                                             underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
@@ -567,27 +589,31 @@ class FilterByInstr(MdxHierarchySet):
 
 class OrderByCellValueHierarchySet(MdxHierarchySet):
 
-    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, cube: str, mdx_tuple: MdxTuple):
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, cube: str, mdx_tuple: MdxTuple,
+                 order: Union[Order, str] = Order.BASC):
         super(OrderByCellValueHierarchySet, self).__init__(underlying_hierarchy_set.dimension,
                                                            underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
         self.cube = normalize(cube)
         self.mdx_tuple = mdx_tuple
+        self.order = Order(order)
 
     def to_mdx(self) -> str:
-        return f"{{ORDER({self.underlying_hierarchy_set.to_mdx()},[{self.cube}].{self.mdx_tuple.to_mdx()})}}"
+        return f"{{ORDER({self.underlying_hierarchy_set.to_mdx()},[{self.cube}].{self.mdx_tuple.to_mdx()},{self.order})}}"
+
 
 class OrderByAttributeValueHierarchySet(MdxHierarchySet):
 
-    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, attribute_name: str, flag: str = 'BASC'):
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, attribute_name: str,
+                 order: Union[str, Order] = Order.BASC):
         super(OrderByAttributeValueHierarchySet, self).__init__(underlying_hierarchy_set.dimension,
-                                                           underlying_hierarchy_set.hierarchy)
+                                                                underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
         self.attribute_name = normalize(attribute_name)
-        self.flag = normalize(flag)
+        self.order = Order(order)
 
     def to_mdx(self) -> str:
-        return f"{{ORDER({self.underlying_hierarchy_set.to_mdx()},[{self.underlying_hierarchy_set.dimension}].[{self.underlying_hierarchy_set.hierarchy}].CURRENTMEMBER.PROPERTIES(\"{self.attribute_name}\"), {self.flag})}}"
+        return f"{{ORDER({self.underlying_hierarchy_set.to_mdx()},[{self.underlying_hierarchy_set.dimension}].[{self.underlying_hierarchy_set.hierarchy}].CURRENTMEMBER.PROPERTIES(\"{self.attribute_name}\"), {self.order})}}"
 
 
 class Tm1SortHierarchySet(MdxHierarchySet):
@@ -853,4 +879,3 @@ class MdxBuilder:
         command = 'echo | set /p nul="' + mdx + '"| clip'
         os.system(command)
         print(mdx)
-        
