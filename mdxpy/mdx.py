@@ -845,6 +845,13 @@ class MdxBuilder:
         self.axes[axis].add_dim_set(mdx_hierarchy_set)
         return self
 
+    def add_empty_set_to_axis(self, axis: int):
+        if axis in self.axes:
+            raise ValueError(f"axis: '{axis}' must be empty")
+
+        hierarchy_set = MdxHierarchySet.from_str("", "", "{}")
+        return self.add_hierarchy_set_to_axis(axis, hierarchy_set)
+
     def add_member_to_where(self, member: Union[str, Member]) -> 'MdxBuilder':
         self._where.add_member(member)
         return self

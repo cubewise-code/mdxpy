@@ -685,3 +685,23 @@ class Test(unittest.TestCase):
     def test_OrderType_invalid(self):
         with pytest.raises(ValueError):
             Order("no_order")
+
+    def test_add_empty_set_to_axis_happy_case(self):
+        mdx = MdxBuilder.from_cube("Cube") \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_all("Dimension")) \
+            .add_empty_set_to_axis(1) \
+            .to_mdx()
+        self.assertEqual(
+            mdx,
+            "SELECT\r\n"
+            "{TM1SUBSETALL([DIMENSION].[DIMENSION])} ON 0,\r\n"
+            "{} ON 1\r\n"
+            "FROM [CUBE]")
+
+    def test_add_empty_set_to_axis_error(self):
+        with pytest.raises(ValueError):
+            mdx = MdxBuilder.from_cube("Cube") \
+                .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_all("Dimension1")) \
+                .add_hierarchy_set_to_axis(1, MdxHierarchySet.tm1_subset_all("Dimension2")) \
+                .add_empty_set_to_axis(1) \
+                .to_mdx()
