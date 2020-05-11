@@ -147,8 +147,32 @@ class Test(unittest.TestCase):
             "{[DIMENSION].[HIERARCHY].MEMBERS}",
             hierarchy_set.to_mdx())
 
-    def test_mdx_hierarchy_set_tm1_subset_to_set(self):
+    def test_mdx_hierarchy_set_tm1_subset_to_set_three_args(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_to_set("Dimension", "Hierarchy", "Default")
+        self.assertEqual(
+            '{TM1SUBSETTOSET([DIMENSION].[HIERARCHY],"Default")}',
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_tm1_subset_to_set_two_args(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_to_set("Dimension", "Default")
+        self.assertEqual(
+            '{TM1SUBSETTOSET([DIMENSION].[DIMENSION],"Default")}',
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_tm1_subset_to_set_one_args_subset_named(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_to_set("Dimension", subset = "Default")
+        self.assertEqual(
+            '{TM1SUBSETTOSET([DIMENSION].[DIMENSION],"Default")}',
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_tm1_subset_to_set_two_named_args(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_to_set(dimension="Dimension", subset="Default")
+        self.assertEqual(
+            '{TM1SUBSETTOSET([DIMENSION].[DIMENSION],"Default")}',
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_tm1_subset_to_set_three_named_args(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_to_set(dimension="Dimension", hierarchy="Hierarchy", subset="Default")
         self.assertEqual(
             '{TM1SUBSETTOSET([DIMENSION].[HIERARCHY],"Default")}',
             hierarchy_set.to_mdx())

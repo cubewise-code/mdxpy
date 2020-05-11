@@ -177,8 +177,8 @@ class MdxHierarchySet:
         return AllMembersHierarchySet(dimension, hierarchy)
 
     @staticmethod
-    def tm1_subset_to_set(dimension: str, hierarchy: str, subset: str) -> 'MdxHierarchySet':
-        return Tm1SubsetToSetHierarchySet(dimension, hierarchy, subset)
+    def tm1_subset_to_set(*args: str, dimension: str = None, hierarchy: str = None, subset: str = None) -> 'MdxHierarchySet':
+        return Tm1SubsetToSetHierarchySet(args, dimension, hierarchy, subset)
 
     @staticmethod
     def all_consolidations(dimension: str, hierarchy: str = None) -> 'MdxHierarchySet':
@@ -482,7 +482,27 @@ class DescendantsHierarchySet(MdxHierarchySet):
 
 
 class Tm1SubsetToSetHierarchySet(MdxHierarchySet):
-    def __init__(self, dimension: str, hierarchy: str, subset: str):
+    def __init__(self, args: str, dimension: str, hierarchy: str, subset: str):
+
+        error_message = ("Valid arguments are (\"dimension_name\", subset = \"subset_name\"), " + 
+                    "(\"dimension_name\", \"subset_name\"), (\"dimension_name\", \"hierarchy_name\", " + 
+                    "\"subset_name\"), or named args with or without a hierarchy specified. ")
+
+        if len(args) > 0:
+            if len(args) == 1:
+                dimension, subset = args[0], subset
+            elif len(args) == 2:
+                dimension, subset = args[0], args[1]
+            elif len(args) == 3:
+                dimension, hierarchy, subset = args[0], args[1], args[2]
+            else:
+                raise ValueError(error_message)
+
+        hierarchy = hierarchy if hierarchy else dimension
+
+        if None in (dimension, hierarchy, subset):
+            raise ValueError(f"{error_message} Current argument values are dimension = {dimension}, hierarchy = {hierarchy}, subset = {subset}")
+
         super(Tm1SubsetToSetHierarchySet, self).__init__(dimension, hierarchy)
         self.subset = subset
 
