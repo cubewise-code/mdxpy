@@ -153,6 +153,12 @@ class Test(unittest.TestCase):
             '{TM1SUBSETTOSET([DIMENSION].[HIERARCHY],"Default")}',
             hierarchy_set.to_mdx())
 
+    def test_mdx_hierarchy_set_tm1_dimension_subset_to_set(self):
+        hierarchy_set = MdxHierarchySet.tm1_dimension_subset_to_set("Dimension", "Default")
+        self.assertEqual(
+            '{TM1SUBSETTOSET([DIMENSION].[DIMENSION],"Default")}',
+            hierarchy_set.to_mdx())
+
     def test_mdx_hierarchy_set_all_consolidations(self):
         hierarchy_set = MdxHierarchySet.all_consolidations("Dimension")
         self.assertEqual(

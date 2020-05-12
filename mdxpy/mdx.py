@@ -181,6 +181,10 @@ class MdxHierarchySet:
         return Tm1SubsetToSetHierarchySet(dimension, hierarchy, subset)
 
     @staticmethod
+    def tm1_dimension_subset_to_set(dimension: str, subset: str) -> 'MdxHierarchySet':
+        return Tm1SubsetToSetHierarchySet(dimension, dimension, subset)
+
+    @staticmethod
     def all_consolidations(dimension: str, hierarchy: str = None) -> 'MdxHierarchySet':
         return AllCElementsHierarchySet(dimension, hierarchy)
 
