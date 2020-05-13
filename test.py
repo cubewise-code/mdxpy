@@ -188,8 +188,8 @@ class Test(unittest.TestCase):
             MdxHierarchySet.member(Member.of("Dimension", "element2")).tm1_drill_down_member()
         ])
         self.assertEqual(
-            "{{[DIMENSION].[DIMENSION].[ELEMENT1].CHILDREN}"
-            ",{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT2]}, "
+            "{{[DIMENSION].[DIMENSION].[ELEMENT1].CHILDREN},"
+            "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT2]}, "
             "ALL, RECURSIVE)}}",
             hierarchy_set.to_mdx())
 
