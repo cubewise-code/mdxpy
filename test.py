@@ -182,6 +182,17 @@ class Test(unittest.TestCase):
             "{[DIMENSION].[DIMENSION].[ELEMENT1],[DIMENSION].[DIMENSION].[ELEMENT2]}",
             hierarchy_set.to_mdx())
 
+    def test_mdx_hierarchy_set_sets(self):
+        hierarchy_set = MdxHierarchySet.sets([
+            MdxHierarchySet.children(Member.of("Dimension", "element1")),
+            MdxHierarchySet.member(Member.of("Dimension", "element2")).tm1_drill_down_member()
+        ])
+        self.assertEqual(
+            "{{[DIMENSION].[DIMENSION].[ELEMENT1].CHILDREN},"
+            "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT2]}, "
+            "ALL, RECURSIVE)}}",
+            hierarchy_set.to_mdx())
+
     def test_mdx_hierarchy_set_parent(self):
         hierarchy_set = MdxHierarchySet.parent(Member.of("Dimension", "Element"))
 
