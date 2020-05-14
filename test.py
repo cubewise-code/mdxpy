@@ -182,15 +182,30 @@ class Test(unittest.TestCase):
             "{[DIMENSION].[DIMENSION].[ELEMENT1],[DIMENSION].[DIMENSION].[ELEMENT2]}",
             hierarchy_set.to_mdx())
 
-    def test_mdx_hierarchy_set_sets(self):
-        hierarchy_set = MdxHierarchySet.sets([
+    def test_mdx_hierarchy_set_unions_no_duplicates(self):
+        hierarchy_set = MdxHierarchySet.unions([
             MdxHierarchySet.children(Member.of("Dimension", "element1")),
-            MdxHierarchySet.member(Member.of("Dimension", "element2")).tm1_drill_down_member()
+            MdxHierarchySet.member(Member.of("Dimension", "element2")),
+            MdxHierarchySet.member(Member.of("Dimension", "element3"))
         ])
+
+        self.assertEqual(
+            "{{[DIMENSION].[DIMENSION].[ELEMENT1].CHILDREN}"
+            " + {[DIMENSION].[DIMENSION].[ELEMENT2]}"
+            " + {[DIMENSION].[DIMENSION].[ELEMENT3]}}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_unions_allow_duplicates(self):
+        hierarchy_set = MdxHierarchySet.unions([
+            MdxHierarchySet.children(Member.of("Dimension", "element1")),
+            MdxHierarchySet.member(Member.of("Dimension", "element2")),
+            MdxHierarchySet.member(Member.of("Dimension", "element3"))
+        ], True)
+
         self.assertEqual(
             "{{[DIMENSION].[DIMENSION].[ELEMENT1].CHILDREN},"
-            "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT2]}, "
-            "ALL, RECURSIVE)}}",
+            "{[DIMENSION].[DIMENSION].[ELEMENT2]},"
+            "{[DIMENSION].[DIMENSION].[ELEMENT3]}}",
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_parent(self):
