@@ -212,8 +212,7 @@ class MdxHierarchySet:
 
     @staticmethod
     def unions(sets: List['MdxHierarchySet'], allow_duplicates: bool = False) -> 'MdxHierarchySet':
-        return UnionsManyHierarchySet(sets, allow_duplicates)
-
+        return MultiUnionHierarchySet(sets, allow_duplicates)
 
     @staticmethod
     def parent(member: Union[str, Member]) -> 'MdxHierarchySet':
@@ -385,13 +384,13 @@ class ElementsHierarchySet(MdxHierarchySet):
         return f"{{{','.join(member.unique_name for member in self.members)}}}"
 
 
-class UnionsManyHierarchySet(MdxHierarchySet):
+class MultiUnionHierarchySet(MdxHierarchySet):
 
     def __init__(self, sets: List[MdxHierarchySet], allow_duplicates: bool = False):
         if not sets:
             raise RuntimeError('sets must not be empty')
 
-        super(UnionsManyHierarchySet, self).__init__(sets[0].dimension, sets[0].hierarchy)
+        super(MultiUnionHierarchySet, self).__init__(sets[0].dimension, sets[0].hierarchy)
         self.sets = sets
         self.allow_duplicates = allow_duplicates
 
@@ -690,7 +689,8 @@ class SubsetHierarchySet(MdxHierarchySet):
 
 class UnionHierarchySet(MdxHierarchySet):
 
-    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, other_hierarchy_set: MdxHierarchySet, allow_duplicates: bool):
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, other_hierarchy_set: MdxHierarchySet,
+                 allow_duplicates: bool):
         super(UnionHierarchySet, self).__init__(underlying_hierarchy_set.dimension, underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
         self.other_hierarchy_set = other_hierarchy_set
