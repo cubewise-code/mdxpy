@@ -387,6 +387,9 @@ class ElementsHierarchySet(MdxHierarchySet):
 class UnionsManyHierarchySet(MdxHierarchySet):
 
     def __init__(self, sets: List[MdxHierarchySet], allow_duplicates: bool = False):
+        if not sets:
+            raise RuntimeError('sets must not be empty')
+
         super(UnionsManyHierarchySet, self).__init__(sets[0].dimension, sets[0].hierarchy)
         self.sets = sets
         self.allow_duplicates = allow_duplicates
