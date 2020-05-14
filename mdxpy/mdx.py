@@ -211,8 +211,8 @@ class MdxHierarchySet:
         return ElementsHierarchySet(*members)
 
     @staticmethod
-    def sets(sets: List['MdxHierarchySet']) -> 'MdxHierarchySet':
-        return SetsHierarchySet(*sets)
+    def unions(sets: List['MdxHierarchySet'], allow_duplicates: bool = False) -> 'MdxHierarchySet':
+        return UnionsManyHierarchySet(sets, allow_duplicates)
 
     @staticmethod
     def parent(member: Union[str, Member]) -> 'MdxHierarchySet':
@@ -301,8 +301,8 @@ class MdxHierarchySet:
     def bottom_count(self, cube, mdx_tuple, top) -> 'MdxHierarchySet':
         return BottomCountHierarchySet(self, cube, mdx_tuple, top)
 
-    def union(self, other_set: 'MdxHierarchySet') -> 'MdxHierarchySet':
-        return UnionHierarchySet(self, other_set)
+    def union(self, other_set: 'MdxHierarchySet', allow_duplicates: bool = False) -> 'MdxHierarchySet':
+        return UnionHierarchySet(self, other_set, allow_duplicates)
 
     def intersect(self, other_set: 'MdxHierarchySet') -> 'MdxHierarchySet':
         return IntersectHierarchySet(self, other_set)
@@ -383,17 +383,22 @@ class ElementsHierarchySet(MdxHierarchySet):
     def to_mdx(self) -> str:
         return f"{{{','.join(member.unique_name for member in self.members)}}}"
 
-class SetsHierarchySet(MdxHierarchySet):
 
-    def __init__(self, *sets: MdxHierarchySet):
+class UnionsManyHierarchySet(MdxHierarchySet):
+
+    def __init__(self, sets: List[MdxHierarchySet], allow_duplicates: bool = False):
         if not sets:
             raise RuntimeError('sets must not be empty')
 
-        super(SetsHierarchySet, self).__init__(sets[0].dimension, sets[0].hierarchy)
+        super(UnionsManyHierarchySet, self).__init__(sets[0].dimension, sets[0].hierarchy)
         self.sets = sets
+        self.allow_duplicates = allow_duplicates
 
     def to_mdx(self) -> str:
-        return f"{{{','.join(set_.to_mdx() for set_ in self.sets)}}}"
+        if self.allow_duplicates:
+            return f"{{{','.join(set_.to_mdx() for set_ in self.sets)}}}"
+        else:
+            return f"{{{' + '.join(set_.to_mdx() for set_ in self.sets)}}}"
 
 
 class ParentHierarchySet(MdxHierarchySet):
@@ -684,13 +689,14 @@ class SubsetHierarchySet(MdxHierarchySet):
 
 class UnionHierarchySet(MdxHierarchySet):
 
-    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, other_hierarchy_set: MdxHierarchySet):
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, other_hierarchy_set: MdxHierarchySet, allow_duplicates: bool):
         super(UnionHierarchySet, self).__init__(underlying_hierarchy_set.dimension, underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
         self.other_hierarchy_set = other_hierarchy_set
+        self.allow_duplicates = allow_duplicates
 
     def to_mdx(self) -> str:
-        return f"{{UNION({self.underlying_hierarchy_set.to_mdx()},{self.other_hierarchy_set.to_mdx()})}}"
+        return f"{{UNION({self.underlying_hierarchy_set.to_mdx()},{self.other_hierarchy_set.to_mdx()}{', ALL' if self.allow_duplicates else ''})}}"
 
 
 class IntersectHierarchySet(MdxHierarchySet):
