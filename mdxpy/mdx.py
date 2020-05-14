@@ -383,18 +383,6 @@ class ElementsHierarchySet(MdxHierarchySet):
     def to_mdx(self) -> str:
         return f"{{{','.join(member.unique_name for member in self.members)}}}"
 
-class SetsHierarchySet(MdxHierarchySet):
-
-    def __init__(self, *sets: MdxHierarchySet):
-        if not sets:
-            raise RuntimeError('sets must not be empty')
-
-        super(SetsHierarchySet, self).__init__(sets[0].dimension, sets[0].hierarchy)
-        self.sets = sets
-
-    def to_mdx(self) -> str:
-        return f"{{{','.join(set_.to_mdx() for set_ in self.sets)}}}"
-
 
 class UnionsManyHierarchySet(MdxHierarchySet):
 
