@@ -1,3 +1,6 @@
+![Logo](./images/logo.png)
+
+
 ## MDXpy
 
 A simple, yet elegant MDX library for TM1

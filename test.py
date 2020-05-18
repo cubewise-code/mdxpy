@@ -4,6 +4,7 @@ import pytest
 from ordered_set import OrderedSet
 
 from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxRange
+from mdxpy.mdx import Order
 
 
 class Test(unittest.TestCase):
@@ -155,7 +156,13 @@ class Test(unittest.TestCase):
     def test_mdx_hierarchy_set_tm1_subset_to_set(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_to_set("Dimension", "Hierarchy", "Default")
         self.assertEqual(
-            "{TM1SUBSETTOSET([DIMENSION].[HIERARCHY],'Default')}",
+            '{TM1SUBSETTOSET([DIMENSION].[HIERARCHY],"Default")}',
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_tm1_dimension_subset_to_set(self):
+        hierarchy_set = MdxHierarchySet.tm1_dimension_subset_to_set("Dimension", "Default")
+        self.assertEqual(
+            '{TM1SUBSETTOSET([DIMENSION].[DIMENSION],"Default")}',
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_all_consolidations(self):
@@ -179,6 +186,32 @@ class Test(unittest.TestCase):
             [Member.of("Dimension", "element1"), Member.of("Dimension", "element2")])
         self.assertEqual(
             "{[DIMENSION].[DIMENSION].[ELEMENT1],[DIMENSION].[DIMENSION].[ELEMENT2]}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_unions_no_duplicates(self):
+        hierarchy_set = MdxHierarchySet.unions([
+            MdxHierarchySet.children(Member.of("Dimension", "element1")),
+            MdxHierarchySet.member(Member.of("Dimension", "element2")),
+            MdxHierarchySet.member(Member.of("Dimension", "element3"))
+        ])
+
+        self.assertEqual(
+            "{{[DIMENSION].[DIMENSION].[ELEMENT1].CHILDREN}"
+            " + {[DIMENSION].[DIMENSION].[ELEMENT2]}"
+            " + {[DIMENSION].[DIMENSION].[ELEMENT3]}}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_unions_allow_duplicates(self):
+        hierarchy_set = MdxHierarchySet.unions([
+            MdxHierarchySet.children(Member.of("Dimension", "element1")),
+            MdxHierarchySet.member(Member.of("Dimension", "element2")),
+            MdxHierarchySet.member(Member.of("Dimension", "element3"))
+        ], True)
+
+        self.assertEqual(
+            "{{[DIMENSION].[DIMENSION].[ELEMENT1].CHILDREN},"
+            "{[DIMENSION].[DIMENSION].[ELEMENT2]},"
+            "{[DIMENSION].[DIMENSION].[ELEMENT3]}}",
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_parent(self):
@@ -231,14 +264,14 @@ class Test(unittest.TestCase):
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_tm1_drill_down_member_all_recursive(self):
-        hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(all=True, recursive=True)
+        hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(all=True,
+                                                                                                           recursive=True)
 
         self.assertEqual(
             "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT]}, ALL, RECURSIVE)}",
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_tm1_drill_down_member_set_recursive(self):
-
         hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(
             other_set=MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]),
             recursive=True)
@@ -247,7 +280,8 @@ class Test(unittest.TestCase):
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_tm1_drill_down_member_all(self):
-        hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(all=True, recursive=False)
+        hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(all=True,
+                                                                                                           recursive=False)
 
         self.assertEqual(
             "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT]}, ALL)}",
@@ -255,8 +289,7 @@ class Test(unittest.TestCase):
 
     def test_mdx_hierarchy_set_tm1_drill_down_member_set(self):
         hierarchy_set = MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]).tm1_drill_down_member(
-                                                            other_set=MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")])
-                                                            ,recursive=False)
+            other_set=MdxHierarchySet.members([Member.of("DIMENSION", "ELEMENT")]), recursive=False)
         self.assertEqual(
             "{TM1DRILLDOWNMEMBER({[DIMENSION].[DIMENSION].[ELEMENT]}, {[DIMENSION].[DIMENSION].[ELEMENT]})}",
             hierarchy_set.to_mdx())
@@ -277,13 +310,13 @@ class Test(unittest.TestCase):
 
         self.assertEqual(
             hierarchy_set.to_mdx(),
-            "{FILTER({[DIMENSION].[HIERARCHY].MEMBERS},[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])='Value1')}")
+            '{FILTER({[DIMENSION].[HIERARCHY].MEMBERS},[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])="Value1")}')
 
     def test_mdx_filter_by_attribute_single_string(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_attribute("Attribute1", ["Value1"])
         self.assertEqual(
             "{FILTER({TM1SUBSETALL([DIMENSION].[DIMENSION])},"
-            "[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])='Value1')}",
+            '[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])="Value1")}',
             hierarchy_set.to_mdx())
 
     def test_mdx_filter_by_attribute_single_numeric(self):
@@ -299,10 +332,10 @@ class Test(unittest.TestCase):
                                                                                         ["Value1", 1, 2.0])
 
         self.assertEqual(
-            "{FILTER({TM1SUBSETALL([DIMENSION].[DIMENSION])},"
-            "[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])='Value1' OR "
-            "[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])=1 OR "
-            "[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])=2.0)}",
+            '{FILTER({TM1SUBSETALL([DIMENSION].[DIMENSION])},'
+            '[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])="Value1" OR '
+            '[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])=1 OR '
+            '[}ELEMENTATTRIBUTES_DIMENSION].([}ELEMENTATTRIBUTES_DIMENSION].[Attribute1])=2.0)}',
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_filter_by_wildcard(self):
@@ -439,7 +472,43 @@ class Test(unittest.TestCase):
 
         self.assertEqual(
             "{ORDER({[DIMENSION1].[HIERARCHY1].MEMBERS},"
-            "[CUBE].([DIMENSION2].[HIERARCHY2].[ELEMENTA],[DIMENSION3].[HIERARCHY3].[ELEMENTB]))}",
+            "[CUBE].([DIMENSION2].[HIERARCHY2].[ELEMENTA],[DIMENSION3].[HIERARCHY3].[ELEMENTB]),BASC)}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_order_desc(self):
+        hierarchy_set = MdxHierarchySet.all_members("Dimension1", "Hierarchy1").order(
+            cube="Cube",
+            mdx_tuple=MdxTuple.of(
+                Member.of("Dimension2", "Hierarchy2", "ElementA"),
+                Member.of("Dimension3", "Hierarchy3", "ElementB")),
+            order=Order.DESC)
+
+        self.assertEqual(
+            "{ORDER({[DIMENSION1].[HIERARCHY1].MEMBERS},"
+            "[CUBE].([DIMENSION2].[HIERARCHY2].[ELEMENTA],[DIMENSION3].[HIERARCHY3].[ELEMENTB]),DESC)}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_order_desc_str(self):
+        hierarchy_set = MdxHierarchySet.all_members("Dimension1", "Hierarchy1").order(
+            cube="Cube",
+            mdx_tuple=MdxTuple.of(
+                Member.of("Dimension2", "Hierarchy2", "ElementA"),
+                Member.of("Dimension3", "Hierarchy3", "ElementB")),
+            order="DESC")
+
+        self.assertEqual(
+            "{ORDER({[DIMENSION1].[HIERARCHY1].MEMBERS},"
+            "[CUBE].([DIMENSION2].[HIERARCHY2].[ELEMENTA],[DIMENSION3].[HIERARCHY3].[ELEMENTB]),DESC)}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_order_by_attribute(self):
+        hierarchy_set = MdxHierarchySet.all_members("Dimension1", "Hierarchy1").order_by_attribute(
+            attribute_name="Attribute1",
+            order='asc')
+
+        self.assertEqual(
+            '{ORDER({[DIMENSION1].[HIERARCHY1].MEMBERS},'
+            '[DIMENSION1].[HIERARCHY1].CURRENTMEMBER.PROPERTIES("ATTRIBUTE1"), ASC)}',
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_generate_attribute_to_member(self):
@@ -468,6 +537,24 @@ class Test(unittest.TestCase):
             "SELECT\r\n"
             "NON EMPTY {[DIM2].[DIM2].[ELEM2]} ON 0,\r\n"
             "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([DIM1].[DIM1])},0)} ON 1\r\n"
+            "FROM [CUBE]\r\n"
+            "WHERE ([DIM3].[DIM3].[ELEM3],[DIM4].[DIM4].[ELEM4])",
+            mdx)
+
+    def test_mdx_builder_tm1_ignore_bad_tuples(self):
+        mdx = MdxBuilder.from_cube("CUBE") \
+            .tm1_ignore_bad_tuples() \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
+            .columns_non_empty() \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
+            .where(Member.of("Dim3", "Elem3"), Member.of("Dim4", "Elem4")) \
+            .to_mdx()
+
+        self.assertEqual(
+            "SELECT\r\n"
+            "NON EMPTY TM1IGNORE_BADTUPLES {[DIM2].[DIM2].[ELEM2]} ON 0,\r\n"
+            "NON EMPTY TM1IGNORE_BADTUPLES {TM1FILTERBYLEVEL({TM1SUBSETALL([DIM1].[DIM1])},0)} ON 1\r\n"
             "FROM [CUBE]\r\n"
             "WHERE ([DIM3].[DIM3].[ELEM3],[DIM4].[DIM4].[ELEM4])",
             mdx)
@@ -600,3 +687,59 @@ class Test(unittest.TestCase):
             "FROM [CUBE]\r\n"
             "WHERE ([DIM2].[DIM2].[TOTALDIM2])",
             mdx)
+
+ef test_OrderType_ASC(self):
+        order = Order("asc")
+        self.assertEqual(order, Order.ASC)
+
+        order = Order("ASC")
+        self.assertEqual(order, Order.ASC)
+        self.assertEqual("ASC", str(order))
+
+    def test_OrderType_DESC(self):
+        order = Order("desc")
+        self.assertEqual(order, Order.DESC)
+
+        order = Order("DESC")
+        self.assertEqual(order, Order.DESC)
+        self.assertEqual("DESC", str(order))
+
+    def test_OrderType_BASC(self):
+        order = Order("basc")
+        self.assertEqual(order, Order.BASC)
+
+        order = Order("BASC")
+        self.assertEqual(order, Order.BASC)
+        self.assertEqual("BASC", str(order))
+
+    def test_OrderType_BDESC(self):
+        order = Order("bdesc")
+        self.assertEqual(order, Order.BDESC)
+
+        order = Order("BDESC")
+        self.assertEqual(order, Order.BDESC)
+        self.assertEqual("BDESC", str(order))
+
+    def test_OrderType_invalid(self):
+        with pytest.raises(ValueError):
+            Order("no_order")
+
+    def test_add_empty_set_to_axis_happy_case(self):
+        mdx = MdxBuilder.from_cube("Cube") \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_all("Dimension")) \
+            .add_empty_set_to_axis(1) \
+            .to_mdx()
+        self.assertEqual(
+            mdx,
+            "SELECT\r\n"
+            "{TM1SUBSETALL([DIMENSION].[DIMENSION])} ON 0,\r\n"
+            "{} ON 1\r\n"
+            "FROM [CUBE]")
+
+    def test_add_empty_set_to_axis_error(self):
+        with pytest.raises(ValueError):
+            mdx = MdxBuilder.from_cube("Cube") \
+                .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_all("Dimension1")) \
+                .add_hierarchy_set_to_axis(1, MdxHierarchySet.tm1_subset_all("Dimension2")) \
+                .add_empty_set_to_axis(1) \
+                .to_mdx()
