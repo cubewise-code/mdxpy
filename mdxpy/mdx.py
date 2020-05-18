@@ -66,7 +66,6 @@ class Member:
     def __hash__(self):
         return hash(self.unique_name)
 
-
 class CalculatedMember(Member):
     def __init__(self, dimension: str, hierarchy: str, element: str, calculation: str):
         super(CalculatedMember, self).__init__(dimension, hierarchy, element)
@@ -97,7 +96,6 @@ class CalculatedMember(Member):
 
     def to_mdx(self):
         return f"MEMBER {self.unique_name} AS {self.calculation}"
-
 
 class MdxTuple:
 
@@ -130,7 +128,6 @@ class MdxTuple:
 
     def __len__(self):
         return len(self.members)
-
 
 class MdxHierarchySet:
 
@@ -294,6 +291,15 @@ class Tm1SubsetAllHierarchySet(MdxHierarchySet):
     def to_mdx(self) -> str:
         return f"{{TM1SUBSETALL([{self.dimension}].[{self.hierarchy}])}}"
 
+class MdxRange(MdxHierarchySet):
+
+    def __init__(self, start_member: Member, end_member: Member):
+        super(MdxRange, self).__init__(start_member.dimension, start_member.hierarchy)
+        self._start_member = start_member
+        self._end_member = end_member
+
+    def to_mdx(self) -> str:
+        return f"{{{self._start_member.unique_name}:{self._end_member.unique_name}}}"
 
 class AllMembersHierarchySet(MdxHierarchySet):
 

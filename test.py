@@ -3,7 +3,7 @@ import unittest
 import pytest
 from ordered_set import OrderedSet
 
-from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember
+from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxRange
 
 
 class Test(unittest.TestCase):
@@ -133,6 +133,12 @@ class Test(unittest.TestCase):
 
         self.assertEqual(len(tupl), 1)
         self.assertEqual(tupl.members[0], Member.of("Dimension1", "Hierarchy1", "Element1"))
+
+    def test_mdx_rage(self):
+        member1 = Member.of("Dimension1", "Hierarchy1", "Element1")
+        member2 = Member.of("Dimension1", "Hierarchy1", "Element2")
+        range = MdxRange(member1, member2)
+        self.assertEqual("{[DIMENSION1].[HIERARCHY1].[ELEMENT1]:[DIMENSION1].[HIERARCHY1].[ELEMENT2]}", range.to_mdx())
 
     def test_mdx_hierarchy_set_tm1_subset_all(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension")
