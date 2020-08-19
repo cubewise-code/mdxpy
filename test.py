@@ -388,6 +388,18 @@ class Test(unittest.TestCase):
             "{TM1SORT({TM1SUBSETALL([DIMENSION].[DIMENSION])},DESC)}",
             hierarchy_set.to_mdx())
 
+    def test_mdx_hierarchy_descendants(self):
+        member = Member.of('Dimension','Hierarchy','Member1')
+        hierarchy_set = MdxHierarchySet.descendants(member)
+        self.assertEqual("{DESCENDANTS([DIMENSION].[HIERARCHY].[MEMBER1])}",hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_range(self):
+        member1 = Member.of('Dimension','Hierarchy','Member1')
+        member2 = Member.of('Dimension','Hierarchy','Member2')
+        hierarchy_set = MdxHierarchySet.range(member1, member2)
+        self.assertEqual("{[DIMENSION].[HIERARCHY].[MEMBER1]:[DIMENSION].[HIERARCHY].[MEMBER2]}",hierarchy_set.to_mdx())
+
+
     def test_mdx_hierarchy_set_head(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").head(10)
 
