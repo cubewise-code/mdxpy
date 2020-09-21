@@ -18,9 +18,7 @@ setup(
     keywords=['MDX', 'TM1', 'IBM Cognos TM1', 'Planning Analytics', 'PA', 'Cognos'],
     tests_require=['pytest'],
     python_requires='>=3.5',
-    install_requires=[
-        "ordered-set"
-    ],
+    install_requires=[],
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',

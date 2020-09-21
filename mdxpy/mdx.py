@@ -3,8 +3,6 @@ from abc import abstractmethod
 from enum import Enum
 from typing import List, Optional, Union
 
-from ordered_set import OrderedSet
-
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
 
 
@@ -31,6 +29,8 @@ def normalize(name: str) -> str:
 
 
 class Member:
+    # control if full element unique name is used for members without explicit hierarchy
+    SHORT_NOTATION = False
 
     def __init__(self, dimension: str, hierarchy: str, element: str):
         self.dimension = dimension
@@ -40,6 +40,8 @@ class Member:
 
     @classmethod
     def build_unique_name(cls, dimension, hierarchy, element) -> str:
+        if cls.SHORT_NOTATION and dimension == hierarchy:
+            return f"[{normalize(dimension)}].[{normalize(element)}]"
         return f"[{normalize(dimension)}].[{normalize(hierarchy)}].[{normalize(element)}]"
 
     @staticmethod
@@ -122,7 +124,7 @@ class CalculatedMember(Member):
 class MdxTuple:
 
     def __init__(self, members):
-        self.members = OrderedSet(members)
+        self.members = list(members)
 
     @staticmethod
     def of(*args: Union[str, Member]) -> 'MdxTuple':
@@ -140,10 +142,10 @@ class MdxTuple:
     def add_member(self, member: Union[str, Member]):
         if isinstance(member, str):
             member = Member.of(member)
-        self.members.add(member)
+        self.members.append(member)
 
     def is_empty(self) -> bool:
-        return len(self.members) == 0
+        return not self.members
 
     def to_mdx(self) -> str:
         return f"({','.join(member.unique_name for member in self.members)})"
@@ -273,7 +275,6 @@ class MdxHierarchySet:
         if isinstance(end_member, str):
             end_member = Member.of(end_member)
         return RangeHierarchySet(start_member, end_member)
-
 
     def filter_by_attribute(self, attribute_name: str, attribute_values: List,
                             operator: Optional[str] = '=') -> 'MdxHierarchySet':
@@ -513,6 +514,7 @@ class DescendantsHierarchySet(MdxHierarchySet):
 
     def to_mdx(self) -> str:
         return f"{{DESCENDANTS({self.member.unique_name})}}"
+
 
 class RangeHierarchySet(MdxHierarchySet):
     def __init__(self, start_member: Member, end_member: Member):
