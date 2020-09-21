@@ -9,6 +9,9 @@ from mdxpy.mdx import Order
 
 class Test(unittest.TestCase):
 
+    def setUp(self) -> None:
+        Member.SHORT_NOTATION = False
+
     def test_normalize_simple(self):
         value = normalize("ele ment")
         self.assertEqual(value, "ELEMENT")
@@ -127,13 +130,6 @@ class Test(unittest.TestCase):
         self.assertEqual(len(tupl), 2)
         self.assertEqual(tupl.members[0], Member.of("Dimension1", "Hierarchy1", "Element1"))
         self.assertEqual(tupl.members[1], Member.of("Dimension2", "Hierarchy2", "Element2"))
-
-    def test_mdx_tuple_add_duplicate_element(self):
-        tupl = MdxTuple.of(Member.of("Dimension1", "Hierarchy1", "Element1"))
-        tupl.add_member(Member.of("Dimension1", "Hierarchy1", "Element1"))
-
-        self.assertEqual(len(tupl), 1)
-        self.assertEqual(tupl.members[0], Member.of("Dimension1", "Hierarchy1", "Element1"))
 
     def test_mdx_hierarchy_set_tm1_subset_all(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension")
@@ -389,16 +385,16 @@ class Test(unittest.TestCase):
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_descendants(self):
-        member = Member.of('Dimension','Hierarchy','Member1')
+        member = Member.of('Dimension', 'Hierarchy', 'Member1')
         hierarchy_set = MdxHierarchySet.descendants(member)
-        self.assertEqual("{DESCENDANTS([DIMENSION].[HIERARCHY].[MEMBER1])}",hierarchy_set.to_mdx())
+        self.assertEqual("{DESCENDANTS([DIMENSION].[HIERARCHY].[MEMBER1])}", hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_range(self):
-        member1 = Member.of('Dimension','Hierarchy','Member1')
-        member2 = Member.of('Dimension','Hierarchy','Member2')
+        member1 = Member.of('Dimension', 'Hierarchy', 'Member1')
+        member2 = Member.of('Dimension', 'Hierarchy', 'Member2')
         hierarchy_set = MdxHierarchySet.range(member1, member2)
-        self.assertEqual("{[DIMENSION].[HIERARCHY].[MEMBER1]:[DIMENSION].[HIERARCHY].[MEMBER2]}",hierarchy_set.to_mdx())
-
+        self.assertEqual("{[DIMENSION].[HIERARCHY].[MEMBER1]:[DIMENSION].[HIERARCHY].[MEMBER2]}",
+                         hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_head(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").head(10)
@@ -749,3 +745,19 @@ class Test(unittest.TestCase):
                 .add_hierarchy_set_to_axis(1, MdxHierarchySet.tm1_subset_all("Dimension2")) \
                 .add_empty_set_to_axis(1) \
                 .to_mdx()
+
+    def test_member_unique_name_short_notation_true(self):
+        Member.SHORT_NOTATION = True
+        member = Member.of("Dimension1", "Element1")
+
+        self.assertEqual(
+            "[DIMENSION1].[ELEMENT1]",
+            member.unique_name)
+
+    def test_member_unique_name_short_notation_false(self):
+        Member.SHORT_NOTATION = False
+        member = Member.of("Dimension1", "Element1")
+
+        self.assertEqual(
+            "[DIMENSION1].[DIMENSION1].[ELEMENT1]",
+            member.unique_name)
