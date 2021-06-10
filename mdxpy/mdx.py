@@ -808,6 +808,8 @@ class MdxAxis:
     def add_dim_set(self, mdx_hierarchy_set: MdxHierarchySet):
         if bool(self.tuples):
             raise ValueError("Can not add set to axis that contains tuples")
+        if not isinstance(mdx_hierarchy_set, MdxHierarchySet):
+            raise ValueError("Can not add MDX Tuples to axis using set method")
 
         self.dim_sets.append(mdx_hierarchy_set)
 
@@ -863,20 +865,23 @@ class MdxBuilder:
         self._tm1_ignore_bad_tuples = ignore
         return self
 
-    def _add_tuple_to_axis(self, axis: MdxAxis, *args: Union[str, Member]) -> 'MdxBuilder':
-        mdx_tuple = MdxTuple.of(*args)
+    def _add_tuple_to_axis(self, axis: MdxAxis, *args: Union[str, Member, MdxTuple]) -> 'MdxBuilder':
+        if isinstance(args[0], MdxTuple):
+            mdx_tuple = args[0]
+        else:
+            mdx_tuple = MdxTuple.of(*args)
         axis.add_tuple(mdx_tuple)
         return self
 
-    def add_member_tuple_to_axis(self, axis: int, *args: Union[str, Member]) -> 'MdxBuilder':
+    def add_member_tuple_to_axis(self, axis: int, *args: Union[str, Member, MdxTuple]) -> 'MdxBuilder':
         if axis not in self.axes:
             self.axes[axis] = MdxAxis.empty()
         return self._add_tuple_to_axis(self.axes[axis], *args)
 
-    def add_member_tuple_to_columns(self, *args: Union[str, Member]) -> 'MdxBuilder':
+    def add_member_tuple_to_columns(self, *args: Union[str, Member, MdxTuple]) -> 'MdxBuilder':
         return self.add_member_tuple_to_axis(0, *args)
 
-    def add_member_tuple_to_rows(self, *args: Union[str, Member]) -> 'MdxBuilder':
+    def add_member_tuple_to_rows(self, *args: Union[str, Member, MdxTuple]) -> 'MdxBuilder':
         return self.add_member_tuple_to_axis(1, *args)
 
     def add_hierarchy_set_to_row_axis(self, mdx_hierarchy_set: MdxHierarchySet) -> 'MdxBuilder':
