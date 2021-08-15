@@ -4,7 +4,7 @@ DESCRIPTION = open('readme.md').read()
 
 setup(
     name="mdxpy",
-    version='0.2',
+    version='0.3',
     maintainer='Marius Wirtz',
     maintainer_email='MWirtz@cubewise.com',
     license="MIT-LICENSE",
@@ -27,6 +27,8 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: Implementation :: CPython'
     ]
 )
