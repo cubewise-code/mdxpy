@@ -1,7 +1,6 @@
 import unittest
 
 import pytest
-from ordered_set import OrderedSet
 
 from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember
 from mdxpy.mdx import Order
@@ -112,7 +111,7 @@ class Test(unittest.TestCase):
 
     def test_mdx_tuple_empty(self):
         tupl = MdxTuple.empty()
-        self.assertEqual(tupl.members, OrderedSet())
+        self.assertEqual(tupl.members, list())
 
     def test_mdx_tuple_create(self):
         tupl = MdxTuple.of(
