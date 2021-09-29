@@ -25,7 +25,7 @@ class Order(Enum):
 
 
 def normalize(name: str) -> str:
-    return name.upper().replace(" ", "").replace("]", "]]")
+    return name.lower().replace(" ", "").replace("]", "]]")
 
 
 class Member:
@@ -97,24 +97,24 @@ class CalculatedMember(Member):
     @staticmethod
     def avg(dimension: str, hierarchy: str, element: str, cube: str, mdx_set: 'MdxHierarchySet',
             mdx_tuple: 'MdxTuple'):
-        calculation = f"AVG({mdx_set.to_mdx()},[{cube.upper()}].{mdx_tuple.to_mdx()})"
+        calculation = f"AVG({mdx_set.to_mdx()},[{cube.lower()}].{mdx_tuple.to_mdx()})"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     @staticmethod
     def sum(dimension: str, hierarchy: str, element: str, cube: str, mdx_set: 'MdxHierarchySet',
             mdx_tuple: 'MdxTuple'):
-        calculation = f"SUM({mdx_set.to_mdx()},[{cube.upper()}].{mdx_tuple.to_mdx()})"
+        calculation = f"SUM({mdx_set.to_mdx()},[{cube.lower()}].{mdx_tuple.to_mdx()})"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     @staticmethod
     def lookup(dimension: str, hierarchy: str, element: str, cube: str, mdx_tuple: 'MdxTuple'):
-        calculation = f"[{cube.upper()}].{mdx_tuple.to_mdx()}"
+        calculation = f"[{cube.lower()}].{mdx_tuple.to_mdx()}"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     @staticmethod
     def lookup_attribute(dimension: str, hierarchy: str, element: str, attribute_dimension: str, attribute: str):
-        attribute_cube = ELEMENT_ATTRIBUTE_PREFIX + attribute_dimension.upper()
-        calculation = f"[{attribute_cube}].([{attribute_cube}].[{attribute.upper()}])"
+        attribute_cube = ELEMENT_ATTRIBUTE_PREFIX + attribute_dimension.lower()
+        calculation = f"[{attribute_cube}].([{attribute_cube}].[{attribute.lower()}])"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     def to_mdx(self):
@@ -621,13 +621,13 @@ class FilterByInstr(MdxHierarchySet):
         self.underlying_hierarchy_set = underlying_hierarchy_set
         self.cube = normalize(cube)
         self.mdx_tuple = mdx_tuple
-        self.substring = substring.upper() if case_insensitive else substring
+        self.substring = substring.lower() if case_insensitive else substring
         self.operator = operator
         self.position = position
         self.case_insensitive = case_insensitive
 
     def to_mdx(self) -> str:
-        return f"{{FILTER({self.underlying_hierarchy_set.to_mdx()},INSTR({'UCASE(' if self.case_insensitive else ''}" \
+        return f"{{FILTER({self.underlying_hierarchy_set.to_mdx()},INSTR({'LCASE(' if self.case_insensitive else ''}" \
                f"[{self.cube}].{self.mdx_tuple.to_mdx()}{')' if self.case_insensitive else ''},'{self.substring}')" \
                f"{self.operator}{self.position})}}"
 
@@ -780,8 +780,8 @@ class GenerateAttributeToMemberSet(MdxHierarchySet):
             underlying_hierarchy_set.dimension,
             underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
-        self.dimension = dimension.upper()
-        self.hierarchy = hierarchy.upper() if hierarchy else self.dimension
+        self.dimension = dimension.lower()
+        self.hierarchy = hierarchy.lower() if hierarchy else self.dimension
         self.attribute = attribute
 
     def to_mdx(self) -> str:
