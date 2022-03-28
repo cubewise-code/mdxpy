@@ -203,6 +203,19 @@ class Test(unittest.TestCase):
             "{[dimension].[dimension].[element3]}}",
             hierarchy_set.to_mdx())
 
+    def test_mdx_hierarchy_set_cross_joins(self):
+        hierarchy_set = MdxHierarchySet.cross_joins([
+            MdxHierarchySet.children(Member.of("Dimension", "element1")),
+            MdxHierarchySet.member(Member.of("Dimension", "element2")),
+            MdxHierarchySet.member(Member.of("Dimension", "element3"))
+        ])
+
+        self.assertEqual(
+            "{{[dimension].[dimension].[element1].CHILDREN}"
+            " * {[dimension].[dimension].[element2]}"
+            " * {[dimension].[dimension].[element3]}}",
+            hierarchy_set.to_mdx())     
+
     def test_mdx_hierarchy_set_parent(self):
         hierarchy_set = MdxHierarchySet.parent(Member.of("Dimension", "Element"))
 
