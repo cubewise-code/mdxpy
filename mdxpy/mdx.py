@@ -418,6 +418,8 @@ class MultiUnionHierarchySet(MdxHierarchySet):
 class MdxSet():
 
     def __init__(self, sets: List[MdxHierarchySet]):
+        if not sets:
+            raise RuntimeError('sets must not be empty')        
         self.sets = sets
 
     def to_mdx(self) -> str:
