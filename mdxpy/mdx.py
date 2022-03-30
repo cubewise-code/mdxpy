@@ -218,7 +218,7 @@ class MdxHierarchySet:
 
     @staticmethod
     def cross_joins(sets: List['MdxHierarchySet']) -> 'MdxHierarchySet':
-        return MultiCrossJoinHierarchySet(sets)
+        return MdxSet(sets)
 
     @staticmethod
     def parent(member: Union[str, Member]) -> 'MdxHierarchySet':
@@ -415,13 +415,9 @@ class MultiUnionHierarchySet(MdxHierarchySet):
             return f"{{{' + '.join(set_.to_mdx() for set_ in self.sets)}}}"
 
 
-class MultiCrossJoinHierarchySet(MdxHierarchySet):
+class MdxSet():
 
     def __init__(self, sets: List[MdxHierarchySet]):
-        if not sets:
-            raise RuntimeError('sets must not be empty')
-
-        super(MultiCrossJoinHierarchySet, self).__init__(sets[0].dimension, sets[0].hierarchy)
         self.sets = sets
 
     def to_mdx(self) -> str:
