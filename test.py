@@ -341,6 +341,13 @@ class Test(unittest.TestCase):
             "{TM1FILTERBYLEVEL({[dimension].[hierarchy].MEMBERS},0)}",
             hierarchy_set.to_mdx())
 
+    def test_mdx_hierarchy_set_filter_by_element_type(self):
+        hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_element_type(1)
+
+        self.assertEqual(
+            "{FILTER({[dimension].[hierarchy].MEMBERS},[dimension].[hierarchy].CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='1')}",
+            hierarchy_set.to_mdx())
+
     def test_mdx_hierarchy_set_filter_by_cell_value_numeric(self):
         hierarchy_set = MdxHierarchySet.all_members("Dimension1", "Hierarchy1").filter_by_cell_value(
             cube="Cube",

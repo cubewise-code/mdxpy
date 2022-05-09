@@ -286,6 +286,9 @@ class MdxHierarchySet:
     def filter_by_level(self, level: int) -> 'MdxHierarchySet':
         return Tm1FilterByLevelHierarchySet(self, level)
 
+    def filter_by_element_type(self, element_type: int) -> 'MdxHierarchySet':
+        return Tm1FilterByElementTypeHierarchySet(self, element_type)
+
     def filter_by_cell_value(self, cube: str, mdx_tuple: MdxTuple, operator: str, value) -> 'MdxHierarchySet':
         return FilterByCellValueHierarchySet(self, cube, mdx_tuple, operator, value)
 
@@ -592,6 +595,19 @@ class Tm1FilterByLevelHierarchySet(MdxHierarchySet):
 
     def to_mdx(self) -> str:
         return f"{{TM1FILTERBYLEVEL({self.underlying_hierarchy_set.to_mdx()},{self.level})}}"
+
+
+class Tm1FilterByElementTypeHierarchySet(MdxHierarchySet):
+
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, element_type: int):
+        super(Tm1FilterByElementTypeHierarchySet, self).__init__(underlying_hierarchy_set.dimension,
+                                                           underlying_hierarchy_set.hierarchy)
+        self.underlying_hierarchy_set = underlying_hierarchy_set
+        self.element_type = element_type
+
+    def to_mdx(self) -> str:
+        return f"{{FILTER({self.underlying_hierarchy_set.to_mdx()},[{self.dimension}].[{self.hierarchy}]" \
+               f".CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='{self.element_type}')}}"
 
 
 class FilterByCellValueHierarchySet(MdxHierarchySet):
