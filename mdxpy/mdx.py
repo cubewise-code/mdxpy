@@ -171,21 +171,62 @@ class MdxTuple:
         return len(self.members)
 
 
-class MdxHierarchySet:
-
-    def __init__(self, dimension: str, hierarchy: Optional[str] = None):
-        self.dimension = normalize(dimension)
-        self.hierarchy = normalize(hierarchy) if hierarchy else self.dimension
+class MdxSet:
 
     @abstractmethod
     def to_mdx(self) -> str:
         pass
+
+    @staticmethod
+    def cross_joins(sets: List['MdxSet']) -> 'MdxSet':
+        return CrossJoinMdxSet(sets)
+
+    @staticmethod
+    def unions(sets: List['MdxSet'], allow_duplicates: bool = False) -> 'MdxSet':
+        return MultiUnionSet(sets, allow_duplicates)
+
+
+class CrossJoinMdxSet(MdxSet):
+    def __init__(self, sets: List['MdxSet']):
+        if not sets:
+            raise RuntimeError('sets must not be empty')
+        self.sets = sets
+
+    def to_mdx(self) -> str:
+        return f"{{{' * '.join(set_.to_mdx() for set_ in self.sets)}}}"
+
+
+class MultiUnionSet(MdxSet):
+
+    def __init__(self, sets: List[MdxSet], allow_duplicates: bool = False):
+        if not sets:
+            raise RuntimeError('sets must not be empty')
+
+        self.sets = sets
+        self.allow_duplicates = allow_duplicates
+
+    def to_mdx(self) -> str:
+        if self.allow_duplicates:
+            return f"{{{','.join(set_.to_mdx() for set_ in self.sets)}}}"
+        else:
+            return f"{{{' + '.join(set_.to_mdx() for set_ in self.sets)}}}"
+
+
+class MdxHierarchySet(MdxSet):
+
+    def __init__(self, dimension: str, hierarchy: Optional[str] = None):
+        self.dimension = normalize(dimension)
+        self.hierarchy = normalize(hierarchy) if hierarchy else self.dimension
 
     def to_clipboard(self):
         mdx = self.to_mdx()
         command = 'echo | set /p nul="' + mdx + '"| clip'
         os.system(command)
         print(mdx)
+
+    @abstractmethod
+    def to_mdx(self) -> str:
+        pass
 
     @staticmethod
     def tm1_subset_all(dimension: str, hierarchy: str = None) -> 'MdxHierarchySet':
@@ -228,14 +269,6 @@ class MdxHierarchySet:
             if isinstance(member, str) else member
             for member in members]
         return ElementsHierarchySet(*members)
-
-    @staticmethod
-    def unions(sets: List['MdxHierarchySet'], allow_duplicates: bool = False) -> 'MdxHierarchySet':
-        return MultiUnionHierarchySet(sets, allow_duplicates)
-
-    @staticmethod
-    def cross_joins(sets: List['MdxHierarchySet']) -> 'MdxHierarchySet':
-        return MdxSet(sets)
 
     @staticmethod
     def parent(member: Union[str, Member]) -> 'MdxHierarchySet':
@@ -417,34 +450,6 @@ class ElementsHierarchySet(MdxHierarchySet):
     def to_mdx(self) -> str:
         return f"{{{','.join(member.unique_name for member in self.members)}}}"
 
-
-class MultiUnionHierarchySet(MdxHierarchySet):
-
-    def __init__(self, sets: List[MdxHierarchySet], allow_duplicates: bool = False):
-        if not sets:
-            raise RuntimeError('sets must not be empty')
-
-        super(MultiUnionHierarchySet, self).__init__(sets[0].dimension, sets[0].hierarchy)
-        self.sets = sets
-        self.allow_duplicates = allow_duplicates
-
-    def to_mdx(self) -> str:
-        if self.allow_duplicates:
-            return f"{{{','.join(set_.to_mdx() for set_ in self.sets)}}}"
-        else:
-            return f"{{{' + '.join(set_.to_mdx() for set_ in self.sets)}}}"
-
-
-class MdxSet():
-
-    def __init__(self, sets: List[MdxHierarchySet]):
-        if not sets:
-            raise RuntimeError('sets must not be empty')        
-        self.sets = sets
-
-    def to_mdx(self) -> str:
-        return f"{{{' * '.join(set_.to_mdx() for set_ in self.sets)}}}"
-        
 
 class ParentHierarchySet(MdxHierarchySet):
 

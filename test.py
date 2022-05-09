@@ -2,8 +2,7 @@ import unittest
 
 import pytest
 
-from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember
-from mdxpy.mdx import Order, ElementType
+from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxSet, Order, ElementType
 
 
 class Test(unittest.TestCase):
@@ -204,7 +203,7 @@ class Test(unittest.TestCase):
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_cross_joins(self):
-        hierarchy_set = MdxHierarchySet.cross_joins([
+        mdx_set = MdxSet.cross_joins([
             MdxHierarchySet.children(Member.of("Dimension", "element1")),
             MdxHierarchySet.member(Member.of("Dimension", "element2")),
             MdxHierarchySet.member(Member.of("Dimension", "element3"))
@@ -214,7 +213,10 @@ class Test(unittest.TestCase):
             "{{[dimension].[dimension].[element1].CHILDREN}"
             " * {[dimension].[dimension].[element2]}"
             " * {[dimension].[dimension].[element3]}}",
-            hierarchy_set.to_mdx())     
+            mdx_set.to_mdx())
+
+    def test_union_cross_join_sets(self):
+        pass
 
     def test_mdx_hierarchy_set_parent(self):
         hierarchy_set = MdxHierarchySet.parent(Member.of("Dimension", "Element"))
@@ -266,8 +268,9 @@ class Test(unittest.TestCase):
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_tm1_drill_down_member_all_recursive(self):
-        hierarchy_set = MdxHierarchySet.members([Member.of("dimension", "element")]).tm1_drill_down_member(all=True,
-                                                                                                           recursive=True)
+        hierarchy_set = MdxHierarchySet.members([Member.of("dimension", "element")]).tm1_drill_down_member(
+            all=True,
+            recursive=True)
 
         self.assertEqual(
             "{TM1DRILLDOWNMEMBER({[dimension].[dimension].[element]}, ALL, RECURSIVE)}",
@@ -282,8 +285,9 @@ class Test(unittest.TestCase):
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_tm1_drill_down_member_all(self):
-        hierarchy_set = MdxHierarchySet.members([Member.of("dimension", "element")]).tm1_drill_down_member(all=True,
-                                                                                                           recursive=False)
+        hierarchy_set = MdxHierarchySet.members([Member.of("dimension", "element")]).tm1_drill_down_member(
+            all=True,
+            recursive=False)
 
         self.assertEqual(
             "{TM1DRILLDOWNMEMBER({[dimension].[dimension].[element]}, ALL)}",
@@ -312,7 +316,8 @@ class Test(unittest.TestCase):
 
         self.assertEqual(
             hierarchy_set.to_mdx(),
-            '{FILTER({[dimension].[hierarchy].MEMBERS},[}ELEMENTATTRIBUTES_dimension].([}ELEMENTATTRIBUTES_dimension].[Attribute1])="Value1")}')
+            '{FILTER({[dimension].[hierarchy].MEMBERS},'
+            '[}ELEMENTATTRIBUTES_dimension].([}ELEMENTATTRIBUTES_dimension].[Attribute1])="Value1")}')
 
     def test_mdx_filter_by_attribute_single_string(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_attribute("Attribute1", ["Value1"])
@@ -355,17 +360,20 @@ class Test(unittest.TestCase):
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_filter_by_element_type(self):
-        hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_element_type(ElementType.NUMERIC)
+        hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_element_type(
+            ElementType.NUMERIC)
 
         self.assertEqual(
-            "{FILTER({[dimension].[hierarchy].MEMBERS},[dimension].[hierarchy].CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='1')}",
+            "{FILTER({[dimension].[hierarchy].MEMBERS},"
+            "[dimension].[hierarchy].CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='1')}",
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_filter_by_element_type_str(self):
         hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_element_type("Numeric")
 
         self.assertEqual(
-            "{FILTER({[dimension].[hierarchy].MEMBERS},[dimension].[hierarchy].CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='1')}",
+            "{FILTER({[dimension].[hierarchy].MEMBERS},"
+            "[dimension].[hierarchy].CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='1')}",
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_filter_by_cell_value_numeric(self):
@@ -502,7 +510,6 @@ class Test(unittest.TestCase):
             "{ORDER({[dimension1].[hierarchy1].MEMBERS},"
             "[cube].([dimension2].[hierarchy2].[elementa],[dimension3].[hierarchy3].[elementb]),BASC)}",
             hierarchy_set.to_mdx())
-
 
     def test_mdx_hierarchy_set_order_desc(self):
         hierarchy_set = MdxHierarchySet.all_members("Dimension1", "Hierarchy1").order(
@@ -795,7 +802,7 @@ class Test(unittest.TestCase):
 
     def test_add_empty_set_to_axis_error(self):
         with pytest.raises(ValueError):
-            mdx = MdxBuilder.from_cube("Cube") \
+            MdxBuilder.from_cube("Cube") \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_all("Dimension1")) \
                 .add_hierarchy_set_to_axis(1, MdxHierarchySet.tm1_subset_all("Dimension2")) \
                 .add_empty_set_to_axis(1) \
