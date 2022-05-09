@@ -24,6 +24,23 @@ class Order(Enum):
         raise ValueError(f"Invalid order type: '{value}'")
 
 
+class ElementType(Enum):
+    NUMERIC = 1
+    STRING = 2
+    CONSOLIDATED = 3
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def _missing_(cls, value: str):
+        for member in cls:
+            if member.name.lower() == value.replace(" ", "").lower():
+                return member
+        # default
+        raise ValueError(f"Invalid element type: '{value}'")
+
+
 def normalize(name: str) -> str:
     return name.lower().replace(" ", "").replace("]", "]]")
 
@@ -286,7 +303,7 @@ class MdxHierarchySet:
     def filter_by_level(self, level: int) -> 'MdxHierarchySet':
         return Tm1FilterByLevelHierarchySet(self, level)
 
-    def filter_by_element_type(self, element_type: int) -> 'MdxHierarchySet':
+    def filter_by_element_type(self, element_type: Union[ElementType, str]) -> 'MdxHierarchySet':
         return Tm1FilterByElementTypeHierarchySet(self, element_type)
 
     def filter_by_cell_value(self, cube: str, mdx_tuple: MdxTuple, operator: str, value) -> 'MdxHierarchySet':
@@ -599,15 +616,15 @@ class Tm1FilterByLevelHierarchySet(MdxHierarchySet):
 
 class Tm1FilterByElementTypeHierarchySet(MdxHierarchySet):
 
-    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, element_type: int):
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, element_type: Union[ElementType, str]):
         super(Tm1FilterByElementTypeHierarchySet, self).__init__(underlying_hierarchy_set.dimension,
-                                                           underlying_hierarchy_set.hierarchy)
+                                                                 underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
-        self.element_type = element_type
+        self.element_type = ElementType(element_type)
 
     def to_mdx(self) -> str:
         return f"{{FILTER({self.underlying_hierarchy_set.to_mdx()},[{self.dimension}].[{self.hierarchy}]" \
-               f".CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='{self.element_type}')}}"
+               f".CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='{self.element_type.value}')}}"
 
 
 class FilterByCellValueHierarchySet(MdxHierarchySet):

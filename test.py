@@ -3,7 +3,7 @@ import unittest
 import pytest
 
 from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember
-from mdxpy.mdx import Order
+from mdxpy.mdx import Order, ElementType
 
 
 class Test(unittest.TestCase):
@@ -342,7 +342,14 @@ class Test(unittest.TestCase):
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_filter_by_element_type(self):
-        hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_element_type(1)
+        hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_element_type(ElementType.NUMERIC)
+
+        self.assertEqual(
+            "{FILTER({[dimension].[hierarchy].MEMBERS},[dimension].[hierarchy].CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='1')}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_filter_by_element_type_str(self):
+        hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_element_type("Numeric")
 
         self.assertEqual(
             "{FILTER({[dimension].[hierarchy].MEMBERS},[dimension].[hierarchy].CURRENTMEMBER.PROPERTIES('ELEMENT_TYPE')='1')}",
@@ -482,6 +489,7 @@ class Test(unittest.TestCase):
             "{ORDER({[dimension1].[hierarchy1].MEMBERS},"
             "[cube].([dimension2].[hierarchy2].[elementa],[dimension3].[hierarchy3].[elementb]),BASC)}",
             hierarchy_set.to_mdx())
+
 
     def test_mdx_hierarchy_set_order_desc(self):
         hierarchy_set = MdxHierarchySet.all_members("Dimension1", "Hierarchy1").order(
@@ -731,6 +739,34 @@ class Test(unittest.TestCase):
     def test_OrderType_invalid(self):
         with pytest.raises(ValueError):
             Order("no_order")
+
+    def test_ElementType_NUMERIC(self):
+        element_type = ElementType("numeric")
+        self.assertEqual(element_type, ElementType.NUMERIC)
+
+        element_type = ElementType("NUMERIC")
+        self.assertEqual(element_type, ElementType.NUMERIC)
+        self.assertEqual("NUMERIC", str(element_type))
+
+    def test_ElementType_STRING(self):
+        element_type = ElementType("string")
+        self.assertEqual(element_type, ElementType.STRING)
+
+        element_type = ElementType("STRING")
+        self.assertEqual(element_type, ElementType.STRING)
+        self.assertEqual("STRING", str(element_type))
+
+    def test_ElementType_CONSOLIDATED(self):
+        element_type = ElementType("consolidated")
+        self.assertEqual(element_type, ElementType.CONSOLIDATED)
+
+        element_type = ElementType("CONSOLIDATED")
+        self.assertEqual(element_type, ElementType.CONSOLIDATED)
+        self.assertEqual("CONSOLIDATED", str(element_type))
+
+    def test_ElementType_invalid(self):
+        with pytest.raises(ValueError):
+            ElementType("no_element_type")
 
     def test_add_empty_set_to_axis_happy_case(self):
         mdx = MdxBuilder.from_cube("Cube") \
