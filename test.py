@@ -2,7 +2,8 @@ import unittest
 
 import pytest
 
-from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxSet, Order, ElementType
+from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxSet, Order, \
+    ElementType, SetAttribute, MdxPropertiesTuple
 
 
 class Test(unittest.TestCase):
@@ -577,6 +578,25 @@ class Test(unittest.TestCase):
             "WHERE ([dim3].[dim3].[elem3],[dim4].[dim4].[elem4])",
             mdx)
 
+    def test_mdx_builder_simple_properties(self):
+        mdx = MdxBuilder.from_cube("cube") \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
+            .columns_non_empty() \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
+            .where(Member.of("Dim3", "Elem3"), Member.of("Dim4", "Elem4")) \
+            .properties(SetAttribute.of("Dim3", "Code and Name"), SetAttribute.of("Dim4", "version")) \
+            .to_mdx()
+
+        self.assertEqual(
+            "SELECT\r\n"
+            "NON EMPTY {[dim2].[dim2].[elem2]} ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "FROM [cube]\r\n"
+            "WHERE ([dim3].[dim3].[elem3],[dim4].[dim4].[elem4])\r\n"
+            "DIMENSION PROPERTIES [dim3].[dim3].[codeandname],[dim4].[dim4].[version]",
+            mdx)
+
     def test_mdx_builder_tm1_ignore_bad_tuples(self):
         mdx = MdxBuilder.from_cube("cube") \
             .tm1_ignore_bad_tuples() \
@@ -682,6 +702,36 @@ class Test(unittest.TestCase):
             "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
             "FROM [cube]\r\n"
             "WHERE ([dim2].[dim2].[totaldim2])",
+            mdx)
+
+    def test_mdx_builder_with_calculated_member_with_properties(self):
+        mdx = MdxBuilder.from_cube(cube="Cube").with_member(
+            CalculatedMember.avg(
+                dimension="Period",
+                hierarchy="Period",
+                element="AVG 2016",
+                cube="Cube",
+                mdx_set=MdxHierarchySet.children(member=Member.of("Period", "2016")),
+                mdx_tuple=MdxTuple.of(Member.of("Dim1", "Total Dim1"),
+                                      Member.of("Dim2", "Total Dim2")))) \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("dim1", "dim1")) \
+            .columns_non_empty() \
+            .add_member_tuple_to_columns(Member.of("Period", "AVG 2016")) \
+            .where("[Dim2].[Total Dim2]") \
+            .properties("[Dim2].[Code and Name]") \
+            .to_mdx()
+
+        self.assertEqual(
+            "WITH\r\n"
+            "MEMBER [period].[period].[avg2016] AS AVG({[period].[period].[2016].CHILDREN},"
+            "[cube].([dim1].[dim1].[totaldim1],[dim2].[dim2].[totaldim2]))\r\n"
+            "SELECT\r\n"
+            "NON EMPTY {([period].[period].[avg2016])} ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "FROM [cube]\r\n"
+            "WHERE ([dim2].[dim2].[totaldim2])\r\n"
+            "DIMENSION PROPERTIES [dim2].[dim2].[codeandname]",
             mdx)
 
     def test_mdx_build_with_multi_calculated_member(self):

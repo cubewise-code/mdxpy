@@ -106,6 +106,66 @@ class Member:
         return hash(self.unique_name)
 
 
+class SetAttribute:
+    SHORT_NOTATION = False
+
+    def __init__(self, dimension: str, hierarchy: str, element: str):
+        self.dimension = dimension
+        self.hierarchy = hierarchy
+        self.element = element
+        self.unique_name = self.build_unique_name(dimension, hierarchy, element)
+
+    @classmethod
+    def build_unique_name(cls, dimension, hierarchy, element) -> str:
+        if cls.SHORT_NOTATION and dimension == hierarchy:
+            return f"[{normalize(dimension)}].[{normalize(element)}]"
+        return f"[{normalize(dimension)}].[{normalize(hierarchy)}].[{normalize(element)}]"
+
+    @staticmethod
+    def from_unique_name(unique_name: str) -> 'SetAttribute':
+        dimension = SetAttribute.dimension_name_from_unique_name(unique_name)
+        element = SetAttribute.element_name_from_unique_name(unique_name)
+        if unique_name.count("].[") == 1:
+            return SetAttribute(dimension, dimension, element)
+
+        elif unique_name.count("].[") == 2:
+            hierarchy = SetAttribute.hierarchy_name_from_unique_name(unique_name)
+            return SetAttribute(dimension, hierarchy, element)
+
+        else:
+            raise ValueError(f"Argument '{unique_name}' must be a valid SetAttribute unique name")
+
+    @staticmethod
+    def of(*args: str) -> 'SetAttribute':
+        # case: '[dim].[elem]'
+        if len(args) == 1:
+            return SetAttribute.from_unique_name(args[0])
+        elif len(args) == 2:
+            return SetAttribute(args[0], args[0], args[1])
+        elif len(args) == 3:
+            return SetAttribute(*args)
+        else:
+            raise ValueError("method takes either one, two or three str arguments")
+
+    @staticmethod
+    def dimension_name_from_unique_name(element_unique_name: str) -> str:
+        return element_unique_name[1:element_unique_name.find('].[')]
+
+    @staticmethod
+    def hierarchy_name_from_unique_name(element_unique_name: str) -> str:
+        return element_unique_name[element_unique_name.find('].[') + 3:element_unique_name.rfind('].[')]
+
+    @staticmethod
+    def element_name_from_unique_name(element_unique_name: str) -> str:
+        return element_unique_name[element_unique_name.rfind('].[') + 3:-1]
+
+    def __eq__(self, other) -> bool:
+        return self.unique_name == other.unique_name
+
+    def __hash__(self):
+        return hash(self.unique_name)
+
+
 class CalculatedMember(Member):
     def __init__(self, dimension: str, hierarchy: str, element: str, calculation: str):
         super(CalculatedMember, self).__init__(dimension, hierarchy, element)
@@ -166,6 +226,39 @@ class MdxTuple:
 
     def to_mdx(self) -> str:
         return f"({','.join(member.unique_name for member in self.members)})"
+
+    def __len__(self):
+        return len(self.members)
+
+
+class MdxPropertiesTuple:
+
+    def __init__(self, members):
+        self.members = list(members)
+
+    @staticmethod
+    def of(*args: Union[str, SetAttribute]) -> 'MdxPropertiesTuple':
+        # handle unique element names
+        members = [SetAttribute.of(member)
+                   if isinstance(member, str) else member
+                   for member in args]
+        mdx_tuple = MdxPropertiesTuple(members)
+        return mdx_tuple
+
+    @staticmethod
+    def empty() -> 'MdxPropertiesTuple':
+        return MdxPropertiesTuple.of()
+
+    def add_member(self, member: Union[str, SetAttribute]):
+        if isinstance(member, str):
+            member = SetAttribute.of(member)
+        self.members.append(member)
+
+    def is_empty(self) -> bool:
+        return not self.members
+
+    def to_mdx(self) -> str:
+        return f"{','.join(member.unique_name for member in self.members)}"
 
     def __len__(self):
         return len(self.members)
@@ -890,6 +983,7 @@ class MdxBuilder:
         self.cube = normalize(cube)
         self.axes = {0: MdxAxis.empty()}
         self._where = MdxTuple.empty()
+        self._properties = MdxPropertiesTuple.empty()
         self.calculated_members = list()
         self._tm1_ignore_bad_tuples = False
 
@@ -961,6 +1055,10 @@ class MdxBuilder:
         self._where.add_member(member)
         return self
 
+    def add_member_to_properties(self, member: Union[str, SetAttribute]) -> 'MdxBuilder':
+        self._properties.add_member(member)
+        return self
+
     def where(self, *args: Union[str, Member]) -> 'MdxBuilder':
         for member in args:
             if isinstance(member, str):
@@ -968,6 +1066,15 @@ class MdxBuilder:
             if not isinstance(member, Member):
                 raise ValueError(f"Argument '{member}' must be of type str or Member")
             self.add_member_to_where(member)
+        return self
+
+    def properties(self, *args: Union[str, SetAttribute]) -> 'MdxBuilder':
+        for member in args:
+            if isinstance(member, str):
+                member = SetAttribute.of(member)
+            if not isinstance(member, SetAttribute):
+                raise ValueError(f"Argument '{member}' must be of type str or Member")
+            self.add_member_to_properties(member)
         return self
 
     def to_mdx(self) -> str:
@@ -983,7 +1090,9 @@ class MdxBuilder:
 
         mdx_where = "\r\nWHERE " + self._where.to_mdx() if not self._where.is_empty() else ""
 
-        return f"""{mdx_with if self.calculated_members else ""}SELECT\r\n{mdx_axes}\r\nFROM [{self.cube}]{mdx_where}"""
+        mdx_properties = "\r\nDIMENSION PROPERTIES " + self._properties.to_mdx() if not self._properties.is_empty() else ""
+
+        return f"""{mdx_with if self.calculated_members else ""}SELECT\r\n{mdx_axes}\r\nFROM [{self.cube}]{mdx_where}{mdx_properties}"""
 
     def to_clipboard(self):
         mdx = self.to_mdx()
