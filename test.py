@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 
-from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxSet, Order, ElementType
+from mdxpy import Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxSet, Order, ElementType, MdxLevelExpression
 
 
 class Test(unittest.TestCase):
@@ -422,6 +422,45 @@ class Test(unittest.TestCase):
         member = Member.of('Dimension', 'Hierarchy', 'Member1')
         hierarchy_set = MdxHierarchySet.descendants(member)
         self.assertEqual("{DESCENDANTS([dimension].[hierarchy].[member1])}", hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_descendants_with_flag(self):
+        member = Member.of('Dimension', 'Hierarchy', 'Member1')
+        hierarchy_set = MdxHierarchySet.descendants(member, desc_flag='SELF_AND_BEFORE')
+        self.assertEqual("{DESCENDANTS([dimension].[hierarchy].[member1], SELF_AND_BEFORE)}", hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_descendants_with_flag_and_level_name(self):
+        member = Member.of('Dimension', 'Hierarchy', 'Member1')
+        hierarchy_set = MdxHierarchySet.descendants(member,
+                                                    MdxLevelExpression.level_name('NamedLevel',
+                                                                                  'Dimension',
+                                                                                  'Hierarchy'),
+                                                    desc_flag='SELF_AND_BEFORE')
+        self.assertEqual("{DESCENDANTS([dimension].[hierarchy].[member1], "
+                         "[dimension].[hierarchy].LEVELS('NamedLevel'), "
+                         "SELF_AND_BEFORE)}",
+                         hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_descendants_with_flag_and_level_number(self):
+        member = Member.of('Dimension', 'Hierarchy', 'Member1')
+        hierarchy_set = MdxHierarchySet.descendants(member,
+                                                    MdxLevelExpression.level_number(2,
+                                                                                  'Dimension',
+                                                                                  'Hierarchy'),
+                                                    desc_flag='SELF_AND_BEFORE')
+        self.assertEqual("{DESCENDANTS([dimension].[hierarchy].[member1], "
+                         "[dimension].[hierarchy].LEVELS(2), "
+                         "SELF_AND_BEFORE)}",
+                         hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_descendants_with_flag_and_member_level(self):
+        member = Member.of('Dimension', 'Hierarchy', 'Member1')
+        hierarchy_set = MdxHierarchySet.descendants(member,
+                                                    MdxLevelExpression.member_level(member),
+                                                    desc_flag='SELF_AND_BEFORE')
+        self.assertEqual("{DESCENDANTS([dimension].[hierarchy].[member1], "
+                         "[dimension].[hierarchy].[member1].LEVEL, "
+                         "SELF_AND_BEFORE)}",
+                         hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_range(self):
         member1 = Member.of('Dimension', 'Hierarchy', 'Member1')
