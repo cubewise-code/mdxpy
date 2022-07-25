@@ -6,6 +6,30 @@ from typing import List, Optional, Union
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
 
 
+class DescFlag(Enum):
+    SELF = 1
+    AFTER = 2
+    BEFORE = 3
+    BEFORE_AND_AFTER = 4
+    SELF_AND_AFTER = 5
+    SELF_AND_BEFORE = 6
+    SELF_BEFORE_AFTER = 7
+    LEAVES = 8
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def _missing_(cls, value: str):
+        if value is None:
+            return None
+        for member in cls:
+            if member.name.lower() == value.replace(" ", "").lower():
+                return member
+        # default
+        raise ValueError(f"Invalid Desc Flag type: '{value}'")
+
+
 class Order(Enum):
     ASC = 1
     DESC = 2
@@ -136,6 +160,60 @@ class CalculatedMember(Member):
 
     def to_mdx(self):
         return f"MEMBER {self.unique_name} AS {self.calculation}"
+
+
+class MdxLevelExpression:
+
+    def __init__(self, dimension: str, hierarchy: Optional[str] = None):
+        self.dimension = normalize(dimension)
+        self.hierarchy = normalize(hierarchy) if hierarchy else self.dimension
+
+    @abstractmethod
+    def to_mdx(self) -> str:
+        pass
+
+    @staticmethod
+    def level_number(level: int, dimension: str, hierarchy: str = None) -> 'MdxLevelExpression':
+        return LevelNumberExpression(level, dimension, hierarchy)
+
+    @staticmethod
+    def level_name(level: str, dimension: str, hierarchy: str = None) -> 'MdxLevelExpression':
+        return LevelNameExpression(level, dimension, hierarchy)
+
+    @staticmethod
+    def member_level(member: Union[str, Member]) -> 'MdxLevelExpression':
+        return MemberLevelExpression(member)
+
+
+class LevelNumberExpression(MdxLevelExpression):
+
+    def __init__(self, level_number: int, dimension: str, hierarchy: str = None):
+        super(LevelNumberExpression, self).__init__(dimension, hierarchy)
+        self.level = level_number
+
+    def to_mdx(self) -> str:
+        return f"[{self.dimension}].[{self.hierarchy}].LEVELS({self.level})"
+
+
+class LevelNameExpression(MdxLevelExpression):
+
+    def __init__(self, level_name: str, dimension: str, hierarchy: str = None):
+        super(LevelNameExpression, self).__init__(dimension, hierarchy)
+        self.level = level_name
+
+    def to_mdx(self) -> str:
+        return f"[{self.dimension}].[{self.hierarchy}].LEVELS(\'{self.level}\')"
+
+
+class MemberLevelExpression(MdxLevelExpression):
+
+    def __init__(self, member: Member):
+        super(MemberLevelExpression, self).__init__(member.dimension, member.hierarchy)
+        self.member = member
+
+    def to_mdx(self) -> str:
+        return f"{self.member.unique_name}.LEVEL"
+
 
 
 class MdxTuple:
@@ -313,10 +391,11 @@ class MdxHierarchySet(MdxSet):
         return DrillDownLevelHierarchySet(member)
 
     @staticmethod
-    def descendants(member: Union[str, Member]) -> 'MdxHierarchySet':
+    def descendants(member: Union[str, Member], level_or_depth: Union[MdxLevelExpression, int] = None,
+                    desc_flag: Union[str, Order] = None) -> 'MdxHierarchySet':
         if isinstance(member, str):
             member = Member.of(member)
-        return DescendantsHierarchySet(member)
+        return DescendantsHierarchySet(member, level_or_depth, desc_flag)
 
     @staticmethod
     def from_str(dimension: str, hierarchy: str, mdx: str):
@@ -390,6 +469,7 @@ class MdxHierarchySet(MdxSet):
     def tm1_drill_down_member(self, all: bool = True, other_set: 'MdxHierarchySet' = None,
                               recursive: bool = True) -> 'MdxHierarchySet':
         return Tm1DrillDownMemberSet(self, all, other_set, recursive)
+
 
 
 class Tm1SubsetAllHierarchySet(MdxHierarchySet):
@@ -548,12 +628,21 @@ class DrillDownLevelHierarchySet(MdxHierarchySet):
 
 class DescendantsHierarchySet(MdxHierarchySet):
 
-    def __init__(self, member: Member):
+    def __init__(self, member: Member, level_or_depth: Union[int, MdxLevelExpression] = None,
+                 description_flag: DescFlag = None):
         super(DescendantsHierarchySet, self).__init__(member.dimension, member.hierarchy)
         self.member = member
+        self.level_or_depth = level_or_depth
+        self.descFlag = DescFlag(description_flag) if description_flag is not None else None
 
     def to_mdx(self) -> str:
-        return f"{{DESCENDANTS({self.member.unique_name})}}"
+        if isinstance(self.level_or_depth, MdxLevelExpression):
+            level_expression = f', {self.level_or_depth.to_mdx()}'
+        else:
+            level_expression = f",{self.level_or_depth}" if self.level_or_depth is not None else ''
+
+        flag = f", {self.descFlag}" if self.descFlag is not None else ''
+        return f"{{DESCENDANTS({self.member.unique_name}{level_expression}{flag})}}"
 
 
 class RangeHierarchySet(MdxHierarchySet):
