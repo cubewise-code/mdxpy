@@ -1,7 +1,7 @@
 import os
 from abc import abstractmethod
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Iterable
 
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
 
@@ -263,6 +263,10 @@ class MdxSet:
     def unions(sets: List['MdxSet'], allow_duplicates: bool = False) -> 'MdxSet':
         return MultiUnionSet(sets, allow_duplicates)
 
+    @staticmethod
+    def tuples(tuples: Iterable['MdxTuple']) -> 'MdxSet':
+        return TuplesSet(tuples)
+
 
 class CrossJoinMdxSet(MdxSet):
     def __init__(self, sets: List['MdxSet']):
@@ -272,6 +276,14 @@ class CrossJoinMdxSet(MdxSet):
 
     def to_mdx(self) -> str:
         return f"{{{' * '.join(set_.to_mdx() for set_ in self.sets)}}}"
+
+
+class TuplesSet(MdxSet):
+    def __init__(self, tuples: Iterable[MdxTuple]):
+        self.tuples = tuples
+
+    def to_mdx(self) -> str:
+        return f"{{ {','.join(tupl.to_mdx() for tupl in self.tuples)} }}"
 
 
 class MultiUnionSet(MdxSet):
@@ -933,8 +945,8 @@ class GenerateAttributeToMemberSet(MdxHierarchySet):
 
 class MdxAxis:
     def __init__(self):
-        self.tuples = list()
-        self.dim_sets = list()
+        self.tuples: List[MdxTuple] = list()
+        self.dim_sets: List[MdxSet] = list()
         self.non_empty = False
 
     @staticmethod
@@ -947,13 +959,14 @@ class MdxAxis:
 
         self.tuples.append(mdx_tuple)
 
-    def add_dim_set(self, mdx_hierarchy_set: MdxHierarchySet):
+    def add_set(self, mdx_set: MdxSet):
         if bool(self.tuples):
             raise ValueError("Can not add set to axis that contains tuples")
-        if not isinstance(mdx_hierarchy_set, MdxHierarchySet):
+
+        if not isinstance(mdx_set, MdxSet):
             raise ValueError("Can not add MDX Tuples to axis using set method")
 
-        self.dim_sets.append(mdx_hierarchy_set)
+        self.dim_sets.append(mdx_set)
 
     def is_empty(self) -> bool:
         return not self.dim_sets and not self.tuples
@@ -1032,11 +1045,20 @@ class MdxBuilder:
     def add_hierarchy_set_to_column_axis(self, mdx_hierarchy_set: MdxHierarchySet) -> 'MdxBuilder':
         return self.add_hierarchy_set_to_axis(0, mdx_hierarchy_set)
 
+    def add_set_to_row_axis(self, mdx_set: MdxSet) -> 'MdxBuilder':
+        return self.add_set_to_axis(1, mdx_set)
+
+    def add_set_to_column_axis(self, mdx_set: MdxSet) -> 'MdxBuilder':
+        return self.add_set_to_axis(0, mdx_set)
+
     def add_hierarchy_set_to_axis(self, axis: int, mdx_hierarchy_set: MdxHierarchySet) -> 'MdxBuilder':
+        return self.add_set_to_axis(axis, mdx_hierarchy_set)
+
+    def add_set_to_axis(self, axis: int, mdx_set: MdxSet) -> 'MdxBuilder':
         if axis not in self.axes:
             self.axes[axis] = MdxAxis.empty()
 
-        self.axes[axis].add_dim_set(mdx_hierarchy_set)
+        self.axes[axis].add_set(mdx_set)
         return self
 
     def add_empty_set_to_axis(self, axis: int):
