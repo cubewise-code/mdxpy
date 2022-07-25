@@ -176,8 +176,8 @@ class Test(unittest.TestCase):
             "{[dimension].[dimension].[element1],[dimension].[dimension].[element2]}",
             hierarchy_set.to_mdx())
 
-    def test_mdx_hierarchy_set_unions_no_duplicates(self):
-        hierarchy_set = MdxHierarchySet.unions([
+    def test_mdx_set_unions_no_duplicates(self):
+        hierarchy_set = MdxSet.unions([
             MdxHierarchySet.children(Member.of("Dimension", "element1")),
             MdxHierarchySet.member(Member.of("Dimension", "element2")),
             MdxHierarchySet.member(Member.of("Dimension", "element3"))
@@ -189,8 +189,8 @@ class Test(unittest.TestCase):
             " + {[dimension].[dimension].[element3]}}",
             hierarchy_set.to_mdx())
 
-    def test_mdx_hierarchy_set_unions_allow_duplicates(self):
-        hierarchy_set = MdxHierarchySet.unions([
+    def test_mdx_set_unions_allow_duplicates(self):
+        hierarchy_set = MdxSet.unions([
             MdxHierarchySet.children(Member.of("Dimension", "element1")),
             MdxHierarchySet.member(Member.of("Dimension", "element2")),
             MdxHierarchySet.member(Member.of("Dimension", "element3"))
@@ -202,7 +202,7 @@ class Test(unittest.TestCase):
             "{[dimension].[dimension].[element3]}}",
             hierarchy_set.to_mdx())
 
-    def test_mdx_hierarchy_set_cross_joins(self):
+    def test_mdx_set_cross_joins(self):
         mdx_set = MdxSet.cross_joins([
             MdxHierarchySet.children(Member.of("Dimension", "element1")),
             MdxHierarchySet.member(Member.of("Dimension", "element2")),
@@ -215,8 +215,18 @@ class Test(unittest.TestCase):
             " * {[dimension].[dimension].[element3]}}",
             mdx_set.to_mdx())
 
-    def test_union_cross_join_sets(self):
-        pass
+    def test_mdx_set_tuples(self):
+        mdx_set = MdxSet.tuples([
+            MdxTuple([Member.of("dimension1", "element1"), Member.of("dimension2", "element3")]),
+            MdxTuple([Member.of("dimension1", "element2"), Member.of("dimension2", "element2")]),
+            MdxTuple([Member.of("dimension1", "element3"), Member.of("dimension2", "element1")])
+        ])
+
+        self.assertEqual(
+            "{ ([dimension1].[dimension1].[element1],[dimension2].[dimension2].[element3]),"
+            "([dimension1].[dimension1].[element2],[dimension2].[dimension2].[element2])," 
+            "([dimension1].[dimension1].[element3],[dimension2].[dimension2].[element1]) }",
+            mdx_set.to_mdx())
 
     def test_mdx_hierarchy_set_parent(self):
         hierarchy_set = MdxHierarchySet.parent(Member.of("Dimension", "Element"))
