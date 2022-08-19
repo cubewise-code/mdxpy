@@ -130,34 +130,25 @@ class Member:
         return hash(self.unique_name)
 
 
-class DimensionProperty:
+class DimensionProperty(Member):
     SHORT_NOTATION = False
 
-    def __init__(self, dimension: str, hierarchy: str, element: str):
-        self.dimension = dimension
-        self.hierarchy = hierarchy
-        self.element = element
-        self.unique_name = self.build_unique_name(dimension, hierarchy, element)
-
-    @classmethod
-    def build_unique_name(cls, dimension, hierarchy, element) -> str:
-        if cls.SHORT_NOTATION and dimension == hierarchy:
-            return f"[{normalize(dimension)}].[{normalize(element)}]"
-        return f"[{normalize(dimension)}].[{normalize(hierarchy)}].[{normalize(element)}]"
+    def __init__(self, dimension: str, hierarchy: str, attribute: str):
+        super(DimensionProperty, self).__init__(dimension, hierarchy, attribute)
 
     @staticmethod
     def from_unique_name(unique_name: str) -> 'DimensionProperty':
-        dimension = DimensionProperty.dimension_name_from_unique_name(unique_name)
-        element = DimensionProperty.element_name_from_unique_name(unique_name)
+        dimension = Member.dimension_name_from_unique_name(unique_name)
+        attribute = Member.element_name_from_unique_name(unique_name)
         if unique_name.count("].[") == 1:
-            return DimensionProperty(dimension, dimension, element)
+            return DimensionProperty(dimension, dimension, attribute)
 
         elif unique_name.count("].[") == 2:
-            hierarchy = DimensionProperty.hierarchy_name_from_unique_name(unique_name)
-            return DimensionProperty(dimension, hierarchy, element)
+            hierarchy = Member.hierarchy_name_from_unique_name(unique_name)
+            return DimensionProperty(dimension, hierarchy, attribute)
 
         else:
-            raise ValueError(f"Argument '{unique_name}' must be a valid SetAttribute unique name")
+            raise ValueError(f"Argument '{unique_name}' must be a valid DimensionProperty unique name")
 
     @staticmethod
     def of(*args: str) -> 'DimensionProperty':
@@ -170,24 +161,6 @@ class DimensionProperty:
             return DimensionProperty(*args)
         else:
             raise ValueError("method takes either one, two or three str arguments")
-
-    @staticmethod
-    def dimension_name_from_unique_name(element_unique_name: str) -> str:
-        return element_unique_name[1:element_unique_name.find('].[')]
-
-    @staticmethod
-    def hierarchy_name_from_unique_name(element_unique_name: str) -> str:
-        return element_unique_name[element_unique_name.find('].[') + 3:element_unique_name.rfind('].[')]
-
-    @staticmethod
-    def element_name_from_unique_name(element_unique_name: str) -> str:
-        return element_unique_name[element_unique_name.rfind('].[') + 3:-1]
-
-    def __eq__(self, other) -> bool:
-        return self.unique_name == other.unique_name
-
-    def __hash__(self):
-        return hash(self.unique_name)
 
 
 class CalculatedMember(Member):
@@ -1232,4 +1205,3 @@ class MdxBuilder:
         command = 'echo | set /p nul="' + mdx + '"| clip'
         os.system(command)
         print(mdx)
-
