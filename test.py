@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 
-from mdxpy import SetAttribute, Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxSet, \
+from mdxpy import DimensionProperty, Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxSet, \
     Order, ElementType, MdxLevelExpression
 
 
@@ -619,8 +619,8 @@ class Test(unittest.TestCase):
 
         self.assertEqual(
             "SELECT\r\n"
-            "NON EMPTY {[dim2].[dim2].[elem2]} ON 0,\r\n"
-            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "NON EMPTY {[dim2].[dim2].[elem2]} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\n"
             "FROM [cube]\r\n"
             "WHERE ([dim3].[dim3].[elem3],[dim4].[dim4].[elem4])",
             mdx)
@@ -629,19 +629,20 @@ class Test(unittest.TestCase):
         mdx = MdxBuilder.from_cube("cube") \
             .rows_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
+            .add_properties_to_row_axis(DimensionProperty.of("Dim1", "Code and Name")) \
             .columns_non_empty() \
             .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
+            .add_properties_to_column_axis(DimensionProperty.of("Dim2", "Name")) \
             .where(Member.of("Dim3", "Elem3"), Member.of("Dim4", "Elem4")) \
-            .properties(SetAttribute.of("Dim3", "Code and Name"), SetAttribute.of("Dim4", "version")) \
             .to_mdx()
 
         self.assertEqual(
             "SELECT\r\n"
-            "NON EMPTY {[dim2].[dim2].[elem2]} ON 0,\r\n"
-            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "NON EMPTY {[dim2].[dim2].[elem2]} DIMENSION PROPERTIES [dim2].[dim2].[name] ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} "
+            "DIMENSION PROPERTIES [dim1].[dim1].[codeandname] ON 1\r\n"
             "FROM [cube]\r\n"
-            "WHERE ([dim3].[dim3].[elem3],[dim4].[dim4].[elem4])\r\n"
-            "DIMENSION PROPERTIES [dim3].[dim3].[codeandname],[dim4].[dim4].[version]",
+            "WHERE ([dim3].[dim3].[elem3],[dim4].[dim4].[elem4])",
             mdx)
 
     def test_mdx_builder_tm1_ignore_bad_tuples(self):
@@ -656,8 +657,8 @@ class Test(unittest.TestCase):
 
         self.assertEqual(
             "SELECT\r\n"
-            "NON EMPTY TM1IGNORE_BADTUPLES {[dim2].[dim2].[elem2]} ON 0,\r\n"
-            "NON EMPTY TM1IGNORE_BADTUPLES {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "NON EMPTY TM1IGNORE_BADTUPLES {[dim2].[dim2].[elem2]} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n"
+            "NON EMPTY TM1IGNORE_BADTUPLES {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\n"
             "FROM [cube]\r\n"
             "WHERE ([dim3].[dim3].[elem3],[dim4].[dim4].[elem4])",
             mdx)
@@ -669,7 +670,7 @@ class Test(unittest.TestCase):
 
         self.assertEqual(
             "SELECT\r\n"
-            "{[dim1].[dim1].[elem1]} ON 0\r\n"
+            "{[dim1].[dim1].[elem1]} DIMENSION PROPERTIES MEMBER_NAME ON 0\r\n"
             "FROM [cube]",
             mdx)
 
@@ -684,11 +685,11 @@ class Test(unittest.TestCase):
 
         self.assertEqual(
             "SELECT\r\n"
-            "{[dim1].[dim1].[elem1]} ON 0,\r\n"
-            "{[dim2].[dim2].[elem2]} ON 1,\r\n"
-            "{[dim3].[dim3].[elem3]} ON 2,\r\n"
-            "{[dim4].[dim4].[elem4]} ON 3,\r\n"
-            "{[dim5].[dim5].[elem5]} ON 4\r\n"
+            "{[dim1].[dim1].[elem1]} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n"
+            "{[dim2].[dim2].[elem2]} DIMENSION PROPERTIES MEMBER_NAME ON 1,\r\n"
+            "{[dim3].[dim3].[elem3]} DIMENSION PROPERTIES MEMBER_NAME ON 2,\r\n"
+            "{[dim4].[dim4].[elem4]} DIMENSION PROPERTIES MEMBER_NAME ON 3,\r\n"
+            "{[dim5].[dim5].[elem5]} DIMENSION PROPERTIES MEMBER_NAME ON 4\r\n"
             "FROM [cube]",
             mdx)
 
@@ -702,8 +703,8 @@ class Test(unittest.TestCase):
 
         self.assertEqual(
             "SELECT\r\n"
-            "NON EMPTY {[dim2].[dim2].[elem2]} ON 0,\r\n"
-            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "NON EMPTY {[dim2].[dim2].[elem2]} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\n"
             "FROM [cube]",
             mdx)
 
@@ -745,8 +746,8 @@ class Test(unittest.TestCase):
             "MEMBER [period].[period].[avg2016] AS AVG({[period].[period].[2016].CHILDREN},"
             "[cube].([dim1].[dim1].[totaldim1],[dim2].[dim2].[totaldim2]))\r\n"
             "SELECT\r\n"
-            "NON EMPTY {([period].[period].[avg2016])} ON 0,\r\n"
-            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "NON EMPTY {([period].[period].[avg2016])} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\n"
             "FROM [cube]\r\n"
             "WHERE ([dim2].[dim2].[totaldim2])",
             mdx)
@@ -766,7 +767,7 @@ class Test(unittest.TestCase):
             .columns_non_empty() \
             .add_member_tuple_to_columns(Member.of("Period", "AVG 2016")) \
             .where("[Dim2].[Total Dim2]") \
-            .properties("[Dim2].[Code and Name]") \
+            .add_properties_to_row_axis("[Dim1].[Code and Name]") \
             .to_mdx()
 
         self.assertEqual(
@@ -774,11 +775,10 @@ class Test(unittest.TestCase):
             "MEMBER [period].[period].[avg2016] AS AVG({[period].[period].[2016].CHILDREN},"
             "[cube].([dim1].[dim1].[totaldim1],[dim2].[dim2].[totaldim2]))\r\n"
             "SELECT\r\n"
-            "NON EMPTY {([period].[period].[avg2016])} ON 0,\r\n"
-            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "NON EMPTY {([period].[period].[avg2016])} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} DIMENSION PROPERTIES [dim1].[dim1].[codeandname] ON 1\r\n"
             "FROM [cube]\r\n"
-            "WHERE ([dim2].[dim2].[totaldim2])\r\n"
-            "DIMENSION PROPERTIES [dim2].[dim2].[codeandname]",
+            "WHERE ([dim2].[dim2].[totaldim2])",
             mdx)
 
     def test_mdx_build_with_multi_calculated_member(self):
@@ -815,8 +815,8 @@ class Test(unittest.TestCase):
             "MEMBER [period].[period].[sum2016] AS SUM({[period].[period].[2016].CHILDREN},"
             "[cube].([dim1].[dim1].[totaldim1],[dim2].[dim2].[totaldim2]))\r\n"
             "SELECT\r\n"
-            "NON EMPTY {[period].[period].[avg2016],[period].[period].[sum2016]} ON 0,\r\n"
-            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "NON EMPTY {[period].[period].[avg2016],[period].[period].[sum2016]} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\n"
             "FROM [cube]\r\n"
             "WHERE ([dim2].[dim2].[totaldim2])",
             mdx)
@@ -893,8 +893,8 @@ class Test(unittest.TestCase):
         self.assertEqual(
             mdx,
             "SELECT\r\n"
-            "{TM1SUBSETALL([dimension].[dimension])} ON 0,\r\n"
-            "{} ON 1\r\n"
+            "{TM1SUBSETALL([dimension].[dimension])} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n"
+            "{} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\n"
             "FROM [cube]")
 
     def test_add_empty_set_to_axis_error(self):
