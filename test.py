@@ -924,14 +924,11 @@ class Test(unittest.TestCase):
     def test_level_expression_number(self):
         level = MdxLevelExpression.level_number(8, "Dimension1", "Hierarchy1")
         self.assertEqual("[dimension1].[hierarchy1].LEVELS(8)", level.to_mdx())
-        print(level.to_mdx())
 
     def test_level_expression_name(self):
         level = MdxLevelExpression.level_name('NamedLevel', "Dimension1", "Hierarchy1")
         self.assertEqual("[dimension1].[hierarchy1].LEVELS('NamedLevel')", level.to_mdx())
-        print(level.to_mdx())
 
     def test_level_expression_member_level(self):
         level = MdxLevelExpression.member_level(Member.of("Dimension1", "Hierarchy1", "Element1"))
         self.assertEqual("[dimension1].[hierarchy1].[element1].LEVEL", level.to_mdx())
-        print(level.to_mdx())
