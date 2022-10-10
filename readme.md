@@ -169,6 +169,33 @@ FROM [RECORDRATING]
 WHERE ([CHART].[CHART].[TOTALCHARTS],[RECORDRATINGMEASURE].[RECORDRATINGMEASURE].[RATING])
 ```
 
+The `DimensionProperty` class is used to query attributes in conjunction with data. 
+It is used with the `MdxBuilder` through the `add_properties_to_row_axis`, `add_hierarchy_set_to_column_axis` functions.
+
+``` python
+from mdxpy import DimensionProperty, MdxHierarchySet, MdxBuilder, Member
+
+query = MdxBuilder.from_cube("Sales")
+
+query = query.rows_non_empty()
+query = query.add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Product"))
+query = query.add_properties_to_row_axis(DimensionProperty.of("Product", "Description"))
+
+query = query.columns_non_empty()
+query = query.add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Sales Measure", "Revenue")))
+
+query = query.where(Member.of("Year", "2022"), Member.of("Region", "Switzerland"))
+
+print(query.to_mdx())
+
+>>> print(mdx)
+SELECT
+NON EMPTY {[salesmeasure].[salesmeasure].[revenue]} DIMENSION PROPERTIES MEMBER_NAME ON 0,
+NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([product].[product])},0)} DIMENSION PROPERTIES [product].[product].[description] ON 1
+FROM [sales]
+WHERE ([year].[year].[2022],[region].[region].[switzerland])
+```
+
 To see all samples checkout the `test.py` file
 
 ## Supported MDX Functions
