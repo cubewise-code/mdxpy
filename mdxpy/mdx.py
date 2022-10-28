@@ -509,6 +509,9 @@ class MdxHierarchySet(MdxSet):
     def tm1_sort(self, ascending=True) -> 'MdxHierarchySet':
         return Tm1SortHierarchySet(self, ascending)
 
+    def tm1_hierarchize(self) -> 'MdxHierarchySet':
+        return Tm1HierarchizeSet(self)
+
     def head(self, head: int) -> 'MdxHierarchySet':
         return HeadHierarchySet(self, head)
 
@@ -888,6 +891,17 @@ class Tm1SortHierarchySet(MdxHierarchySet):
 
     def to_mdx(self) -> str:
         return f"{{TM1SORT({self.underlying_hierarchy_set.to_mdx()},{'ASC' if self.ascending else 'DESC'})}}"
+
+
+class Tm1HierarchizeSet(MdxHierarchySet):
+
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet):
+        super(Tm1HierarchizeSet, self).__init__(underlying_hierarchy_set.dimension,
+                                                underlying_hierarchy_set.hierarchy)
+        self.underlying_hierarchy_set = underlying_hierarchy_set
+
+    def to_mdx(self) -> str:
+        return f"{{HIERARCHIZE({self.underlying_hierarchy_set.to_mdx()})}}"
 
 
 class HeadHierarchySet(MdxHierarchySet):
