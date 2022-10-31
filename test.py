@@ -427,8 +427,8 @@ class Test(unittest.TestCase):
             "{TM1SORT({TM1SUBSETALL([dimension].[dimension])},DESC)}",
             hierarchy_set.to_mdx())
 
-    def test_mdx_hierarchy_set_tm1_hierarchize(self):
-        hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").tm1_hierarchize()
+    def test_mdx_hierarchy_set_hierarchize(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").hierarchize()
 
         self.assertEqual(
             "{HIERARCHIZE({TM1SUBSETALL([dimension].[dimension])})}",
