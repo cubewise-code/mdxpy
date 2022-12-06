@@ -481,7 +481,9 @@ class Test(unittest.TestCase):
     def test_mdx_hierarchy_set_range(self):
         member1 = Member.of('Dimension', 'Hierarchy', 'Member1')
         member2 = Member.of('Dimension', 'Hierarchy', 'Member2')
+
         hierarchy_set = MdxHierarchySet.range(member1, member2)
+
         self.assertEqual("{[dimension].[hierarchy].[member1]:[dimension].[hierarchy].[member2]}",
                          hierarchy_set.to_mdx())
 
@@ -613,6 +615,19 @@ class Test(unittest.TestCase):
             "{GENERATE("
             "{TM1FILTERBYLEVEL({TM1SUBSETALL([store].[store])},0)},"
             "{STRTOMEMBER('[manager].[manager].[' + [store].[store].CURRENTMEMBER.PROPERTIES(\"Manager\") + ']')})}",
+            hierarchy_set.to_mdx())
+
+    def test_mdx_hierarchy_set_unions_allow_duplicates(self):
+        hierarchy_set = MdxSet.unions([
+            MdxHierarchySet.children(Member.of("Dimension", "element1")),
+            MdxHierarchySet.member(Member.of("Dimension", "element2")),
+            MdxHierarchySet.member(Member.of("Dimension", "element3"))
+        ], True)
+
+        self.assertEqual(
+            "{{[dimension].[dimension].[element1].CHILDREN},"
+            "{[dimension].[dimension].[element2]},"
+            "{[dimension].[dimension].[element3]}}",
             hierarchy_set.to_mdx())
 
     def test_mdx_builder_simple(self):

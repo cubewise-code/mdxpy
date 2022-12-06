@@ -486,6 +486,10 @@ class MdxHierarchySet(MdxSet):
             end_member = Member.of(end_member)
         return RangeHierarchySet(start_member, end_member)
 
+    @staticmethod
+    def unions(sets: List['MdxHierarchySet'], allow_duplicates: bool = False) -> 'MdxHierarchySet':
+        return MultiUnionHierarchySet(sets, allow_duplicates)
+
     def filter_by_attribute(self, attribute_name: str, attribute_values: List,
                             operator: Optional[str] = '=') -> 'MdxHierarchySet':
         return FilterByAttributeHierarchySet(self, attribute_name, attribute_values, operator)
@@ -1018,6 +1022,26 @@ class GenerateAttributeToMemberSet(MdxHierarchySet):
     def to_mdx(self) -> str:
         return f"{{GENERATE({self.underlying_hierarchy_set.to_mdx()}," \
                f"{{STRTOMEMBER('[{self.dimension}].[{self.hierarchy}].[' + [{self.underlying_hierarchy_set.dimension}].[{self.underlying_hierarchy_set.hierarchy}].CURRENTMEMBER.PROPERTIES(\"{self.attribute}\") + ']')}})}}"
+
+
+class MultiUnionHierarchySet(MdxHierarchySet):
+
+    def __init__(self, sets: List[MdxHierarchySet], allow_duplicates: bool = False):
+        if not sets:
+            raise RuntimeError('sets must not be empty')
+
+        super(MultiUnionHierarchySet, self).__init__(
+            sets[0].dimension,
+            sets[0].hierarchy)
+
+        self.sets = sets
+        self.allow_duplicates = allow_duplicates
+
+    def to_mdx(self) -> str:
+        if self.allow_duplicates:
+            return f"{{{','.join(set_.to_mdx() for set_ in self.sets)}}}"
+        else:
+            return f"{{{' + '.join(set_.to_mdx() for set_ in self.sets)}}}"
 
 
 class MdxAxis:
