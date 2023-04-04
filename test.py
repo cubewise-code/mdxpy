@@ -216,6 +216,7 @@ class Test(unittest.TestCase):
             " * {[dimension].[dimension].[element3]}}",
             mdx_set.to_mdx())
 
+
     def test_mdx_set_tuples(self):
         mdx_set = MdxSet.tuples([
             MdxTuple([Member.of("dimension1", "element1"), Member.of("dimension2", "element3")]),
@@ -841,6 +842,58 @@ class Test(unittest.TestCase):
             "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\n"
             "FROM [cube]\r\n"
             "WHERE ([dim2].[dim2].[totaldim2])",
+            mdx)
+
+    def test_mdx_builder_to_mdx_skip_dimension_properties(self):
+        mdx = MdxBuilder.from_cube("cube") \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
+            .columns_non_empty() \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
+            .where(Member.of("Dim3", "Elem3"), Member.of("Dim4", "Elem4")) \
+            .to_mdx(skip_dimension_properties=True)
+
+        self.assertEqual(
+            "SELECT\r\n"
+            "NON EMPTY {[dim2].[dim2].[elem2]} ON 0,\r\n"
+            "NON EMPTY {TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} ON 1\r\n"
+            "FROM [cube]\r\n"
+            "WHERE ([dim3].[dim3].[elem3],[dim4].[dim4].[elem4])",
+            mdx)
+
+    def test_mdx_builder_to_mdx_head_tail_columns(self):
+        mdx = MdxBuilder.from_cube("cube") \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Dim1")) \
+            .columns_non_empty() \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
+            .where(Member.of("Dim3", "Elem3"), Member.of("Dim4", "Elem4")) \
+            .to_mdx(head_columns=2, tail_columns=1)
+
+        self.assertEqual(
+            "SELECT\r\n"
+            "NON EMPTY {TAIL({HEAD({TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)} * {[dim2].[dim2].[elem2]}, 2)}, 1)} "
+            "DIMENSION PROPERTIES MEMBER_NAME ON 0\r\n"
+            "FROM [cube]\r\n"
+            "WHERE ([dim3].[dim3].[elem3],[dim4].[dim4].[elem4])",
+            mdx)
+
+    def test_mdx_builder_to_mdx_head_tail_rows_and_columns(self):
+        mdx = MdxBuilder.from_cube("cube") \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Dim1")) \
+            .columns_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim2")) \
+            .rows_non_empty() \
+            .where(Member.of("Dim3", "Elem3"), Member.of("Dim4", "Elem4")) \
+            .to_mdx(head_columns=4, tail_columns=2, head_rows=2, tail_rows=1)
+
+        self.assertEqual(
+            "SELECT\r\n"
+            "NON EMPTY {TAIL({HEAD({TM1FILTERBYLEVEL({TM1SUBSETALL([dim1].[dim1])},0)}, 4)}, 2)} "
+            "DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n"
+            "NON EMPTY {TAIL({HEAD({TM1FILTERBYLEVEL({TM1SUBSETALL([dim2].[dim2])},0)}, 2)}, 1)} "
+            "DIMENSION PROPERTIES MEMBER_NAME ON 1\r\n"
+            "FROM [cube]\r\n"
+            "WHERE ([dim3].[dim3].[elem3],[dim4].[dim4].[elem4])",
             mdx)
 
     def test_OrderType_ASC(self):
