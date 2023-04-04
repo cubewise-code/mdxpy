@@ -901,7 +901,7 @@ class HierarchizeSet(MdxHierarchySet):
 
     def __init__(self, underlying_hierarchy_set: MdxHierarchySet):
         super(HierarchizeSet, self).__init__(underlying_hierarchy_set.dimension,
-                                                underlying_hierarchy_set.hierarchy)
+                                             underlying_hierarchy_set.hierarchy)
         self.underlying_hierarchy_set = underlying_hierarchy_set
 
     def to_mdx(self) -> str:
@@ -1075,17 +1075,29 @@ class MdxAxis:
     def set_non_empty(self, non_empty: bool = True):
         self.non_empty = non_empty
 
-    def to_mdx(self, tm1_ignore_bad_tuples=False) -> str:
+    def to_mdx(self, tm1_ignore_bad_tuples: bool = False, head: int = None, tail: int = None) -> str:
         if self.is_empty():
             return "{}"
 
-        return f"""{"NON EMPTY " if self.non_empty else ""}{"TM1IGNORE_BADTUPLES " if tm1_ignore_bad_tuples else ""}{self.dim_sets_to_mdx() if self.dim_sets else self.tuples_to_mdx()}"""
+        return f"""{"NON EMPTY " if self.non_empty else ""}{"TM1IGNORE_BADTUPLES " if tm1_ignore_bad_tuples else ""}{self.dim_sets_to_mdx(head, tail) if self.dim_sets else self.tuples_to_mdx(head, tail)}"""
 
-    def dim_sets_to_mdx(self) -> str:
-        return " * ".join(dim_set.to_mdx() for dim_set in self.dim_sets)
+    def dim_sets_to_mdx(self, head: int = None, tail: int = None) -> str:
+        mdx = " * ".join(dim_set.to_mdx() for dim_set in self.dim_sets)
+        if head is not None:
+            mdx = f"{{HEAD({mdx}, {head})}}"
+        if tail is not None:
+            mdx = f"{{TAIL({mdx}, {tail})}}"
 
-    def tuples_to_mdx(self) -> str:
-        return f"{{{','.join(tupl.to_mdx() for tupl in self.tuples)}}}"
+        return mdx
+
+    def tuples_to_mdx(self, head: int = None, tail: int = None) -> str:
+        mdx = f"{{{','.join(tupl.to_mdx() for tupl in self.tuples)}}}"
+        if head is not None:
+            mdx = f"{{HEAD({mdx}, {head})}}"
+        if tail is not None:
+            mdx = f"{{TAIL({mdx}, {tail})}}"
+
+        return mdx
 
 
 class MdxBuilder:
@@ -1209,27 +1221,42 @@ class MdxBuilder:
 
         return self
 
-    def _axis_mdx(self, position):
+    def _axis_mdx(self, position: int, head: int = None, tail: int = None, skip_dimension_properties=False):
         axis = self.axes[position]
         axis_properties = self.axes_properties.get(position, MdxPropertiesTuple.empty())
         if axis.is_empty():
             return ""
 
+        if skip_dimension_properties:
+            return " ".join([
+                axis.to_mdx(self._tm1_ignore_bad_tuples, head, tail),
+                f"ON {position}"
+            ])
+
         return " ".join([
-            axis.to_mdx(self._tm1_ignore_bad_tuples),
+            axis.to_mdx(self._tm1_ignore_bad_tuples, head, tail),
             "DIMENSION PROPERTIES",
             "MEMBER_NAME" if axis_properties.is_empty() else axis_properties.to_mdx(),
             f"ON {position}"
         ])
 
-    def to_mdx(self) -> str:
+    def to_mdx(self, head_columns: int = None, head_rows: int = None, tail_columns: int = None, tail_rows: int = None,
+               skip_dimension_properties: bool = False) -> str:
         mdx_with = "WITH\r\n" + "\r\n".join(
             calculated_member.to_mdx()
             for calculated_member
             in self.calculated_members) + "\r\n"
 
+        head_by_axis_position = {0: head_columns, 1: head_rows}
+        tail_by_axis_position = {0: tail_columns, 1: tail_rows}
+
         mdx_axes = ",\r\n".join(
-            self._axis_mdx(position)
+            self._axis_mdx(
+                position,
+                # default for head, tail is False for axes beyond rows and columns
+                head=head_by_axis_position.get(position, False),
+                tail=tail_by_axis_position.get(position, False),
+                skip_dimension_properties=skip_dimension_properties)
             for position
             in self.axes)
 
