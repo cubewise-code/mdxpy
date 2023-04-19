@@ -1254,8 +1254,8 @@ class MdxBuilder:
             self._axis_mdx(
                 position,
                 # default for head, tail is False for axes beyond rows and columns
-                head=head_by_axis_position.get(position, False),
-                tail=tail_by_axis_position.get(position, False),
+                head=head_by_axis_position.get(position, None),
+                tail=tail_by_axis_position.get(position, None),
                 skip_dimension_properties=skip_dimension_properties)
             for position
             in self.axes)
