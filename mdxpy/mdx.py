@@ -1270,3 +1270,94 @@ class MdxBuilder:
         command = 'echo | set /p nul="' + mdx + '"| clip'
         os.system(command)
         print(mdx)
+
+class MultiMdxBuilder(MdxBuilder):
+    def __init__(self, cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str]):
+        super(MultiMdxBuilder, self).__init__(cube)
+        self.multi_dimension = multi_dimension
+        self.multi_hierarchy = multi_hierarchy
+        self.multi_subsets = multi_subsets
+        self.axes_list = [{1: MdxAxis.empty()} for _ in self.multi_subsets]
+        for i, axes in enumerate(self.axes_list):
+            axes[1].add_set(mdx_set=MdxHierarchySet.tm1_subset_to_set(multi_dimension, multi_hierarchy, multi_subsets[i]))
+
+    def from_cube(cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str]) -> 'MultiMdxBuilder':
+        return MultiMdxBuilder(cube, multi_dimension, multi_hierarchy, multi_subsets)
+
+    def non_empty(self, axis: int) -> 'MultiMdxBuilder':
+        for axes_index, axes in enumerate(self.axes_list):
+            if axis not in axes:
+                self.axes_list[axes_index][axis] = MdxAxis.empty()
+            self.axes_list[axes_index][axis].set_non_empty()
+        return self
+
+    def add_member_tuple_to_axis(self, axis: int, *args: Union[str, Member, MdxTuple]) -> 'MultiMdxBuilder':
+        for axes_index, axes in enumerate(self.axes_list):
+            if axis not in axes:
+                self.axes_list[axes_index][axis] = MdxAxis.empty()
+            self._add_tuple_to_axis(self.axes_list[axes_index][axis], *args)
+        return self
+
+    def add_set_to_axis(self, axis: int, mdx_set: MdxSet) -> 'MultiMdxBuilder':
+        for axes_index, axes in enumerate(self.axes_list):
+            if axis not in axes:
+                self.axes_list[axes_index][axis] = MdxAxis.empty()
+            self.axes_list[axes_index][axis].add_set(mdx_set)
+        return self
+
+    def _axis_mdx(self, axes_index: int , position: int, head: int = None, tail: int = None, skip_dimension_properties=False):
+        axis = self.axes_list[axes_index][position]
+        axis_properties = self.axes_properties.get(position, MdxPropertiesTuple.empty())
+        if axis.is_empty():
+            return ""
+
+        if skip_dimension_properties:
+            return " ".join([
+                axis.to_mdx(self._tm1_ignore_bad_tuples, head, tail),
+                f"ON {position}"
+            ])
+
+        return " ".join([
+            axis.to_mdx(self._tm1_ignore_bad_tuples, head, tail),
+            "DIMENSION PROPERTIES",
+            "MEMBER_NAME" if axis_properties.is_empty() else axis_properties.to_mdx(),
+            f"ON {position}"
+        ])
+
+    def to_mdx(self, head_columns: int = None, head_rows: int = None, tail_columns: int = None, tail_rows: int = None,
+               skip_dimension_properties: bool = False) -> List[str]:
+        mdx_list = []
+        for axes_index, axes in enumerate(self.axes_list):
+            print(axes_index)
+            print(axes)
+            mdx_with = "WITH\r\n" + "\r\n".join(
+                calculated_member.to_mdx()
+                for calculated_member
+                in self.calculated_members) + "\r\n"
+
+            head_by_axis_position = {0: head_columns, 1: head_rows}
+            tail_by_axis_position = {0: tail_columns, 1: tail_rows}
+
+            mdx_axes = ",\r\n".join(
+                self._axis_mdx(axes_index,
+                    position,
+                    # default for head, tail is False for axes beyond rows and columns
+                    head=head_by_axis_position.get(position, None),
+                    tail=tail_by_axis_position.get(position, None),
+                    skip_dimension_properties=skip_dimension_properties)
+                for position
+                in axes)
+
+            mdx_where = "\r\nWHERE " + self._where.to_mdx() if not self._where.is_empty() else ""
+
+            mdx_list.append(f"""{mdx_with if self.calculated_members else ""}SELECT\r\n{mdx_axes}\r\nFROM [{self.cube}]{mdx_where}""")
+
+        return mdx_list
+
+    def to_clipboard(self):
+        mdx_list = self.to_mdx()
+        for mdx in mdx_list:
+            mdx = mdx.replace('\r\n', ' ')
+            command = 'echo | set /p nul="' + mdx + '"| clip'
+            os.system(command)
+            print(mdx)
