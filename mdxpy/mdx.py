@@ -1328,8 +1328,6 @@ class MultiMdxBuilder(MdxBuilder):
                skip_dimension_properties: bool = False) -> List[str]:
         mdx_list = []
         for axes_index, axes in enumerate(self.axes_list):
-            print(axes_index)
-            print(axes)
             mdx_with = "WITH\r\n" + "\r\n".join(
                 calculated_member.to_mdx()
                 for calculated_member
