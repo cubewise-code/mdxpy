@@ -279,6 +279,13 @@ class Test(unittest.TestCase):
             "{DRILLDOWNLEVEL({[dimension].[dimension].[element]})}",
             hierarchy_set.to_mdx())
 
+        hierarchy_set = MdxHierarchySet.drill_down_level(Member.of("Dimension", "Element"), level=3)
+
+        self.assertEqual(
+            "{DRILLDOWNLEVEL(DRILLDOWNLEVEL(DRILLDOWNLEVEL({[dimension].[dimension].[element]})))}",
+            hierarchy_set.to_mdx())
+
+
     def test_mdx_hierarchy_set_tm1_drill_down_member_all_recursive(self):
         hierarchy_set = MdxHierarchySet.members([Member.of("dimension", "element")]).tm1_drill_down_member(
             recursive=True)
