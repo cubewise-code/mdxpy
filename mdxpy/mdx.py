@@ -462,7 +462,7 @@ class MdxHierarchySet(MdxSet):
         return AncestorHierarchySet(member, ancestor)
 
     @staticmethod
-    def drill_down_level(member: Union[str, Member], level) -> 'MdxHierarchySet':
+    def drill_down_level(member: Union[str, Member], level: int) -> 'MdxHierarchySet':
         if isinstance(member, str):
             member = Member.of(member)
         return DrillDownLevelHierarchySet(member, level)
@@ -704,6 +704,11 @@ class DrillDownLevelHierarchySet(MdxHierarchySet):
         super(DrillDownLevelHierarchySet, self).__init__(member.dimension, member.hierarchy)
         self.level = level
         self.member = member
+
+        if level:
+            self.level = level
+        else:
+            self.level = 1
 
     def to_mdx(self) -> str:
         startstring = ''
