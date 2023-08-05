@@ -702,7 +702,6 @@ class DrillDownLevelHierarchySet(MdxHierarchySet):
 
     def __init__(self, member: Member, level):
         super(DrillDownLevelHierarchySet, self).__init__(member.dimension, member.hierarchy)
-        self.level = level
         self.member = member
 
         if level:
