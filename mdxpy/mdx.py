@@ -191,6 +191,16 @@ class CalculatedMember(Member):
         calculation = f"[{attribute_cube}].([{attribute_cube}].[{attribute.lower()}])"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
+    @staticmethod
+    def lookup_property(dimension: str, hierarchy: str,  property_name: str, element: str = "CURRENTMEMBER",
+                        typed: bool = False):
+        typed_argument = ", TYPED" if typed else ""
+        adjusted_element = f"[{element}]" if not element.upper() == "CURRENTMEMBER" else element
+        calculation = f"[{dimension}]." \
+                      f"[{hierarchy}]." \
+                      f"{adjusted_element}.PROPERTIES('{property_name}'{typed_argument})"
+        return CalculatedMember(dimension, hierarchy, element, calculation)
+
     def to_mdx(self):
         return f"MEMBER {self.unique_name} AS {self.calculation}"
 
