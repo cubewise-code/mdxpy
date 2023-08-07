@@ -192,13 +192,13 @@ class CalculatedMember(Member):
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     @staticmethod
-    def lookup_property(dimension: str, hierarchy: str,  property_name: str, element: str = "CURRENTMEMBER",
+    def lookup_property(dimension: str, hierarchy: str,  element: str, property_name: str, element_lookup: str = "CURRENTMEMBER",
                         typed: bool = False):
         typed_argument = ", TYPED" if typed else ""
-        adjusted_element = f"[{element}]" if not element.upper() == "CURRENTMEMBER" else element
+        adjusted_element_lookup = f"[{element_lookup}]" if not element_lookup.upper() == "CURRENTMEMBER" else element_lookup
         calculation = f"[{dimension}]." \
                       f"[{hierarchy}]." \
-                      f"{adjusted_element}.PROPERTIES('{property_name}'{typed_argument})"
+                      f"{adjusted_element_lookup}.PROPERTIES('{property_name}'{typed_argument})"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     def to_mdx(self):

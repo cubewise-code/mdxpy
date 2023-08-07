@@ -109,6 +109,42 @@ class Test(unittest.TestCase):
             "MEMBER [period].[period].[versionattribute1] AS [}elementattributes_version]."
             "([}elementattributes_version].[}elementattributes_version].[attribute1])")
 
+    def test_calculated_property_lookup_current_member(self):
+        calculated_member = CalculatedMember.lookup_property(
+            "Period",
+            "Period",
+            "Name",
+            "MEMBER_NAME")
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [period].[period].[name] AS [Period].[Period].CURRENTMEMBER.PROPERTIES('MEMBER_NAME')")
+
+    def test_calculated_property_lookup_element(self):
+        calculated_member = CalculatedMember.lookup_property(
+            "Period",
+            "Period",
+            "Name",
+            "MEMBER_NAME",
+            "Jan")
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [period].[period].[name] AS [Period].[Period].[Jan].PROPERTIES('MEMBER_NAME')")
+
+    def test_calculated_property_lookup_element_typed(self):
+        calculated_member = CalculatedMember.lookup_property(
+            "Period",
+            "Period",
+            "Name",
+            "WEIGHT",
+            "Jan",
+            True)
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [period].[period].[name] AS [Period].[Period].[Jan].PROPERTIES('WEIGHT', TYPED)")
+
     def test_mdx_tuple_empty(self):
         tupl = MdxTuple.empty()
         self.assertEqual(tupl.members, list())
@@ -215,7 +251,6 @@ class Test(unittest.TestCase):
             " * {[dimension].[dimension].[element2]}"
             " * {[dimension].[dimension].[element3]}}",
             mdx_set.to_mdx())
-
 
     def test_mdx_set_tuples(self):
         mdx_set = MdxSet.tuples([
