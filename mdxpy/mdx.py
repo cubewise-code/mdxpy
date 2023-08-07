@@ -494,6 +494,10 @@ class MdxHierarchySet(MdxSet):
                             operator: Optional[str] = '=') -> 'MdxHierarchySet':
         return FilterByAttributeHierarchySet(self, attribute_name, attribute_values, operator)
 
+    def filter_by_property(self, property_name: str, property_values: List,
+                           operator: Optional[str] = '=', typed: Optional[bool] = False) -> 'MdxHierarchySet':
+        return FilterByPropertyHierarchySet(self, property_name, property_values, operator, typed)
+
     def filter_by_pattern(self, wildcard: str) -> 'MdxHierarchySet':
         return Tm1FilterByPattern(self, wildcard)
 
@@ -761,6 +765,38 @@ class StrHierarchySet(MdxHierarchySet):
 
     def to_mdx(self) -> str:
         return self._mdx
+
+
+class FilterByPropertyHierarchySet(MdxHierarchySet):
+
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, property_name: str,
+                 property_values: List,
+                 operator: str = '=', typed: bool = False):
+        super(FilterByPropertyHierarchySet, self).__init__(underlying_hierarchy_set.dimension,
+                                                           underlying_hierarchy_set.hierarchy)
+        self.underlying_hierarchy_set = underlying_hierarchy_set
+        self.property_name = property_name
+        self.property_values = property_values
+        self.operator = operator
+        self.typed = typed
+
+    def to_mdx(self) -> str:
+        typed_argument = ", TYPED" if self.typed else ""
+
+        property_mdx = f"[{self.underlying_hierarchy_set.dimension}]." \
+                       f"[{self.underlying_hierarchy_set.hierarchy}]." \
+                       f"CURRENTMEMBER.PROPERTIES('{self.property_name}' {typed_argument})"
+
+        adjusted_values = [f"'{value}'" if isinstance(value, str) else value
+                             for value
+                             in self.property_values]
+
+        mdx_filter = " OR ".join(
+            f"{property_mdx}{self.operator}{value}"
+            for value
+            in adjusted_values)
+
+        return f"{{FILTER({self.underlying_hierarchy_set.to_mdx()},{mdx_filter})}}"
 
 
 class FilterByAttributeHierarchySet(MdxHierarchySet):
