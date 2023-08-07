@@ -700,14 +700,10 @@ class Tm1DrillDownMemberSet(MdxHierarchySet):
 
 class DrillDownLevelHierarchySet(MdxHierarchySet):
 
-    def __init__(self, member: Member, level):
+    def __init__(self, member: Member, level: int =1):
         super(DrillDownLevelHierarchySet, self).__init__(member.dimension, member.hierarchy)
         self.member = member
-
-        if level:
-            self.level = level
-        else:
-            self.level = 1
+        self.level = level
 
     def to_mdx(self) -> str:
         startstring = ''
