@@ -120,6 +120,19 @@ class Test(unittest.TestCase):
             calculated_member.to_mdx(),
             "MEMBER [period].[period].[name] AS [Period].[Period].CURRENTMEMBER.PROPERTIES('MEMBER_NAME')")
 
+    def test_calculated_property_lookup_current_member_typed(self):
+        calculated_member = CalculatedMember.lookup_property(
+            "Period",
+            "Period",
+            "Name",
+            "MEMBER_NAME",
+            element_lookup="CurrentMember",
+            typed=True)
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [period].[period].[name] AS [Period].[Period].CURRENTMEMBER.PROPERTIES('MEMBER_NAME', TYPED)")
+
     def test_calculated_property_lookup_element(self):
         calculated_member = CalculatedMember.lookup_property(
             "Period",

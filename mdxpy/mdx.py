@@ -2,6 +2,7 @@ import os
 from abc import abstractmethod
 from enum import Enum
 from typing import List, Optional, Union, Iterable
+import re
 
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
 
@@ -67,6 +68,62 @@ class ElementType(Enum):
 
 def normalize(name: str) -> str:
     return name.lower().replace(" ", "").replace("]", "]]")
+
+
+class CurrentMember:
+    SHORT_NOTATION = False
+
+    def __init__(self, dimension: str, hierarchy: str):
+        self.dimension = dimension
+        self.hierarchy = hierarchy
+        self.unique_name = self.build_unique_name(dimension, hierarchy)
+
+    @classmethod
+    def build_unique_name(cls, dimension, hierarchy) -> str:
+        if cls.SHORT_NOTATION and dimension == hierarchy:
+            return f"[{normalize(dimension)}].CURRENTMEMBER"
+        return f"[{normalize(dimension)}].[{normalize(hierarchy)}].CURRENTMEMBER"
+
+    @staticmethod
+    def from_unique_name(unique_name: str) -> 'CurrentMember':
+        dimension = CurrentMember.dimension_name_from_unique_name(unique_name)
+        if unique_name.count("].") == 1:
+            return CurrentMember(dimension, dimension)
+        elif unique_name.count("].") == 2:
+            hierarchy = CurrentMember.hierarchy_name_from_unique_name(unique_name)
+            return CurrentMember(dimension, hierarchy)
+        else:
+            raise ValueError(f"Argument '{unique_name}' must be a valid member unique name")
+
+    @staticmethod
+    def of(*args: str) -> 'CurrentMember':
+        # case: '[dim].[elem]'
+        if len(args) == 1:
+            pattern = re.compile(r"\[[A-Za-z]+\]\.", re.IGNORECASE)
+            if re.search(pattern=pattern, string=args[0]):
+                return CurrentMember.from_unique_name(args[0])
+            else:
+                return CurrentMember(args[0], args[0])
+        elif len(args) == 2:
+            return CurrentMember(args[0], args[1])
+        else:
+            raise ValueError("method takes either one, two or three str arguments")
+
+    @staticmethod
+    def dimension_name_from_unique_name(unique_name: str) -> str:
+        return unique_name[1:unique_name.find('].')]
+
+    @staticmethod
+    def hierarchy_name_from_unique_name(unique_name: str) -> str:
+        return unique_name[unique_name.find('].[') + 3:unique_name.rfind('].')]
+
+
+
+    def __eq__(self, other) -> bool:
+        return self.unique_name == other.unique_name
+
+    def __hash__(self):
+        return hash(self.unique_name)
 
 
 class Member:
@@ -192,13 +249,11 @@ class CalculatedMember(Member):
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     @staticmethod
-    def lookup_property(dimension: str, hierarchy: str,  element: str, property_name: str, element_lookup: str = "CURRENTMEMBER",
+    def lookup_property(dimension: str, hierarchy: str, element: str, property_name: str,
+                        member_lookup: Member | CurrentMember,
                         typed: bool = False):
         typed_argument = ", TYPED" if typed else ""
-        adjusted_element_lookup = f"[{element_lookup}]" if not element_lookup.upper() == "CURRENTMEMBER" else element_lookup
-        calculation = f"[{dimension}]." \
-                      f"[{hierarchy}]." \
-                      f"{adjusted_element_lookup}.PROPERTIES('{property_name}'{typed_argument})"
+        calculation = f"{member_lookup.unique_name}.PROPERTIES('{property_name}'{typed_argument})"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     def to_mdx(self):
@@ -785,14 +840,13 @@ class FilterByPropertyHierarchySet(MdxHierarchySet):
 
     def to_mdx(self) -> str:
         typed_argument = ", TYPED" if self.typed else ""
-
-        property_mdx = f"[{self.underlying_hierarchy_set.dimension}]." \
-                       f"[{self.underlying_hierarchy_set.hierarchy}]." \
-                       f"CURRENTMEMBER.PROPERTIES('{self.property_name}' {typed_argument})"
+        current_member = CurrentMember.of(self.underlying_hierarchy_set.dimension,
+                                          self.underlying_hierarchy_set.hierarchy)
+        property_mdx = f"{current_member.unique_name}.PROPERTIES('{self.property_name}' {typed_argument})"
 
         adjusted_values = [f"'{value}'" if isinstance(value, str) else value
-                             for value
-                             in self.property_values]
+                           for value
+                           in self.property_values]
 
         mdx_filter = " OR ".join(
             f"{property_mdx}{self.operator}{value}"
