@@ -3,7 +3,7 @@ import unittest
 import pytest
 
 from mdxpy import DimensionProperty, Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxSet, \
-    Order, ElementType, MdxLevelExpression
+    Order, ElementType, MdxLevelExpression, CurrentMember
 
 
 class Test(unittest.TestCase):
@@ -114,11 +114,13 @@ class Test(unittest.TestCase):
             "Period",
             "Period",
             "Name",
-            "MEMBER_NAME")
+            "MEMBER_NAME",
+            CurrentMember.of("Period", "Period")
+            )
 
         self.assertEqual(
             calculated_member.to_mdx(),
-            "MEMBER [period].[period].[name] AS [Period].[Period].CURRENTMEMBER.PROPERTIES('MEMBER_NAME')")
+            "MEMBER [period].[period].[name] AS [period].[period].CURRENTMEMBER.PROPERTIES('MEMBER_NAME')")
 
     def test_calculated_property_lookup_current_member_typed(self):
         calculated_member = CalculatedMember.lookup_property(
@@ -126,12 +128,12 @@ class Test(unittest.TestCase):
             "Period",
             "Name",
             "MEMBER_NAME",
-            element_lookup="CurrentMember",
+            CurrentMember.of("Period", "Period"),
             typed=True)
 
         self.assertEqual(
             calculated_member.to_mdx(),
-            "MEMBER [period].[period].[name] AS [Period].[Period].CURRENTMEMBER.PROPERTIES('MEMBER_NAME', TYPED)")
+            "MEMBER [period].[period].[name] AS [period].[period].CURRENTMEMBER.PROPERTIES('MEMBER_NAME', TYPED)")
 
     def test_calculated_property_lookup_element(self):
         calculated_member = CalculatedMember.lookup_property(
@@ -139,11 +141,11 @@ class Test(unittest.TestCase):
             "Period",
             "Name",
             "MEMBER_NAME",
-            "Jan")
+            Member.of("Period", "Jan"))
 
         self.assertEqual(
             calculated_member.to_mdx(),
-            "MEMBER [period].[period].[name] AS [Period].[Period].[Jan].PROPERTIES('MEMBER_NAME')")
+            "MEMBER [period].[period].[name] AS [period].[period].[jan].PROPERTIES('MEMBER_NAME')")
 
     def test_calculated_property_lookup_element_typed(self):
         calculated_member = CalculatedMember.lookup_property(
@@ -151,12 +153,12 @@ class Test(unittest.TestCase):
             "Period",
             "Name",
             "WEIGHT",
-            "Jan",
+            Member.of("Period", "Jan"),
             True)
 
         self.assertEqual(
             calculated_member.to_mdx(),
-            "MEMBER [period].[period].[name] AS [Period].[Period].[Jan].PROPERTIES('WEIGHT', TYPED)")
+            "MEMBER [period].[period].[name] AS [period].[period].[jan].PROPERTIES('WEIGHT', TYPED)")
 
     def test_mdx_tuple_empty(self):
         tupl = MdxTuple.empty()
@@ -409,6 +411,32 @@ class Test(unittest.TestCase):
             '[}ELEMENTATTRIBUTES_dimension].([}ELEMENTATTRIBUTES_dimension].[Attribute1])=1 OR '
             '[}ELEMENTATTRIBUTES_dimension].([}ELEMENTATTRIBUTES_dimension].[Attribute1])=2.0)}',
             hierarchy_set.to_mdx())
+
+    def test_mdx_filter_by_property_single_string(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_property("Member_Name", ["Element1"])
+        self.assertEqual(
+            "{FILTER({TM1SUBSETALL([dimension].[dimension])},"
+            "[dimension].[dimension].CURRENTMEMBER.PROPERTIES('Member_Name')"
+            '="Element1")}',
+            hierarchy_set.to_mdx())
+
+    def test_mdx_filter_by_property_single_numeric(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_property("WEIGHT", [1])
+        self.assertEqual(
+            "{FILTER({TM1SUBSETALL([dimension].[dimension])},"
+            "[dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')"
+            '=1)}',
+            hierarchy_set.to_mdx())
+
+    def test_mdx_filter_by_property_multiple(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_property("WEIGHT",
+                                                                                        [ 1, -1])
+
+        self.assertEqual(
+                "{FILTER({TM1SUBSETALL([dimension].[dimension])},"
+                "[dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')=1 "
+                "OR [dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')=-1)}",
+                hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_filter_by_wildcard(self):
         hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_pattern("2011*")
