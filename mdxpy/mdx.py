@@ -842,9 +842,9 @@ class FilterByPropertyHierarchySet(MdxHierarchySet):
         typed_argument = ", TYPED" if self.typed else ""
         current_member = CurrentMember.of(self.underlying_hierarchy_set.dimension,
                                           self.underlying_hierarchy_set.hierarchy)
-        property_mdx = f"{current_member.unique_name}.PROPERTIES('{self.property_name}' {typed_argument})"
+        property_mdx = f"{current_member.unique_name}.PROPERTIES('{self.property_name}'{typed_argument})"
 
-        adjusted_values = [f"'{value}'" if isinstance(value, str) else value
+        adjusted_values = [f'"{value}"' if isinstance(value, str) else value
                            for value
                            in self.property_values]
 
