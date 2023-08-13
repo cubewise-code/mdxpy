@@ -1272,17 +1272,17 @@ class MdxBuilder:
         print(mdx)
 
 class MultiMdxBuilder(MdxBuilder):
-    def __init__(self, cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str]):
+    def __init__(self, cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str], multi_axis: int=1):
         super(MultiMdxBuilder, self).__init__(cube)
         self.multi_dimension = multi_dimension
         self.multi_hierarchy = multi_hierarchy
         self.multi_subsets = multi_subsets
-        self.axes_list = [{1: MdxAxis.empty()} for _ in self.multi_subsets]
+        self.axes_list = [{multi_axis: MdxAxis.empty()} for _ in self.multi_subsets]
         for i, axes in enumerate(self.axes_list):
-            axes[1].add_set(mdx_set=MdxHierarchySet.tm1_subset_to_set(multi_dimension, multi_hierarchy, multi_subsets[i]))
+            axes[multi_axis].add_set(mdx_set=MdxHierarchySet.tm1_subset_to_set(multi_dimension, multi_hierarchy, multi_subsets[i]))
 
-    def from_cube(cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str]) -> 'MultiMdxBuilder':
-        return MultiMdxBuilder(cube, multi_dimension, multi_hierarchy, multi_subsets)
+    def from_cube(cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str], multi_axis: int=1) -> 'MultiMdxBuilder':
+        return MultiMdxBuilder(cube, multi_dimension, multi_hierarchy, multi_subsets, multi_axis)
 
     def non_empty(self, axis: int) -> 'MultiMdxBuilder':
         for axes_index, axes in enumerate(self.axes_list):
@@ -1335,7 +1335,6 @@ class MultiMdxBuilder(MdxBuilder):
 
             head_by_axis_position = {0: head_columns, 1: head_rows}
             tail_by_axis_position = {0: tail_columns, 1: tail_rows}
-
             mdx_axes = ",\r\n".join(
                 self._axis_mdx(axes_index,
                     position,
@@ -1344,7 +1343,7 @@ class MultiMdxBuilder(MdxBuilder):
                     tail=tail_by_axis_position.get(position, None),
                     skip_dimension_properties=skip_dimension_properties)
                 for position
-                in axes)
+                in sorted(axes))
 
             mdx_where = "\r\nWHERE " + self._where.to_mdx() if not self._where.is_empty() else ""
 
