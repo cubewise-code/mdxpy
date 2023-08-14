@@ -99,7 +99,7 @@ class CurrentMember:
     def of(*args: str) -> 'CurrentMember':
         # case: '[dim].[elem]'
         if len(args) == 1:
-            pattern = re.compile(r"\[[A-Za-z]+\]\.", re.IGNORECASE)
+            pattern = re.compile(r"\[(.*?)+\]\.", re.IGNORECASE)
             if re.search(pattern=pattern, string=args[0]):
                 return CurrentMember.from_unique_name(args[0])
             else:

@@ -55,6 +55,42 @@ class Test(unittest.TestCase):
         element = Member.of("Dim", "Hier", "Elem")
         self.assertEqual(element.unique_name, "[dim].[hier].[elem]")
 
+    def test_current_member_of_one_arg_mdx(self):
+        dimension_element = CurrentMember.of("[Dimension].CurrentMember")
+        self.assertEqual(dimension_element.dimension, "Dimension")
+        self.assertEqual(dimension_element.hierarchy, "Dimension")
+
+    def test_current_member_of_one_arg_with_hierarchy(self):
+        dimension_element = CurrentMember.of("[Dimension].[Hierarchy].CurrentMember")
+        self.assertEqual(dimension_element.dimension, "Dimension")
+        self.assertEqual(dimension_element.hierarchy, "Hierarchy")
+
+    def test_current_member_of_one_arg(self):
+        dimension_element = CurrentMember.of("Dimension")
+        self.assertEqual(dimension_element.dimension, "Dimension")
+        self.assertEqual(dimension_element.hierarchy, "Dimension")
+
+    def test_current_member_of_two_arguments(self):
+        dimension_element = CurrentMember.of("Dimension", "Hierarchy")
+        self.assertEqual(dimension_element.dimension, "Dimension")
+        self.assertEqual(dimension_element.hierarchy, "Hierarchy")
+
+    def test_current_member_of_error(self):
+        with pytest.raises(ValueError):
+            CurrentMember.of("Dimension", "Hierarchy","Element")
+
+    def test_current_member_unique_name_without_hierarchy(self):
+        element = CurrentMember.of("Dim")
+        self.assertEqual(element.unique_name, "[dim].[dim].CURRENTMEMBER")
+
+    def test_current_member_unique_name_with_hierarchy(self):
+        element = CurrentMember.of("Dim", "Hier")
+        self.assertEqual(element.unique_name, "[dim].[hier].CURRENTMEMBER")
+
+    def test_current_member_unique_name_with_hierarchy_spaces(self):
+        element = CurrentMember.of("Dimension Name", "Hierarchy Name")
+        self.assertEqual(element.unique_name, "[dimensionname].[hierarchyname].CURRENTMEMBER")
+
     def test_calculated_member_avg(self):
         calculated_member = CalculatedMember.avg(
             dimension="Period",
