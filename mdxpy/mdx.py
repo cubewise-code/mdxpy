@@ -1,10 +1,57 @@
 import os
-from abc import abstractmethod
+from abc import abstractmethod, ABC
+from typing import Optional
 from enum import Enum
 from typing import List, Optional, Union, Iterable
 import re
 
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
+
+
+class MdxMember(ABC):
+    """ Represents an MDX Member Expression Object"""
+
+    @staticmethod
+    def of(*args, **kwargs) -> 'MdxMember':
+        """
+        Create MDX Member based on parameters
+        """
+
+    @classmethod
+    def build_unique_name(cls, *args, **kwargs) -> str:
+        """
+        Construct MDX Member Unique Name
+        """
+
+    @staticmethod
+    def from_unique_name(unique_name: str) -> 'MdxMember':
+        """
+        Build Member from input parameters
+        """
+
+    @staticmethod
+    def dimension_name_from_unique_name(unique_name: str) -> str:
+        """
+        Get dimension name from MDX statement
+        """
+
+    @staticmethod
+    def hierarchy_name_from_unique_name(unique_name: str) -> str:
+        """
+        Get hierarchy from mdx statement
+        """
+
+    @staticmethod
+    def element_name_from_unique_name(element_unique_name: str) -> str:
+        """
+        Get element name from mdx statement
+        """
+
+    def __eq__(self, other) -> bool:
+        pass
+
+    def __hash__(self):
+        pass
 
 
 class DescFlag(Enum):
@@ -70,7 +117,7 @@ def normalize(name: str) -> str:
     return name.lower().replace(" ", "").replace("]", "]]")
 
 
-class CurrentMember:
+class CurrentMember(MdxMember):
     SHORT_NOTATION = False
 
     def __init__(self, dimension: str, hierarchy: str):
@@ -117,8 +164,6 @@ class CurrentMember:
     def hierarchy_name_from_unique_name(unique_name: str) -> str:
         return unique_name[unique_name.find('].[') + 3:unique_name.rfind('].')]
 
-
-
     def __eq__(self, other) -> bool:
         return self.unique_name == other.unique_name
 
@@ -126,7 +171,7 @@ class CurrentMember:
         return hash(self.unique_name)
 
 
-class Member:
+class Member(MdxMember):
     # control if full element unique name is used for members without explicit hierarchy
     SHORT_NOTATION = False
 
