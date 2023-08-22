@@ -1,9 +1,8 @@
 import os
+import re
 from abc import abstractmethod, ABC
-from typing import Optional
 from enum import Enum
 from typing import List, Optional, Union, Iterable
-import re
 
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
 
@@ -814,7 +813,7 @@ class Tm1DrillDownMemberSet(MdxHierarchySet):
 
 class DrillDownLevelHierarchySet(MdxHierarchySet):
 
-    def __init__(self, member: Member, level: int =1):
+    def __init__(self, member: Member, level: int = 1):
         super(DrillDownLevelHierarchySet, self).__init__(member.dimension, member.hierarchy)
         self.member = member
         self.level = level
@@ -825,7 +824,7 @@ class DrillDownLevelHierarchySet(MdxHierarchySet):
         for _ in range(self.level):
             startstring += 'DRILLDOWNLEVEL('
             endstring += ')'
-            
+
         return f"{{{startstring}{{{self.member.unique_name}}}{endstring}}}"
 
 
@@ -1423,17 +1422,25 @@ class MdxBuilder:
         os.system(command)
         print(mdx)
 
+
 class MultiMdxBuilder(MdxBuilder):
-    def __init__(self, cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str], multi_axis: int=1):
+    def __init__(self, cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str],
+                 multi_axis: int = 1):
         super(MultiMdxBuilder, self).__init__(cube)
         self.multi_dimension = multi_dimension
         self.multi_hierarchy = multi_hierarchy
         self.multi_subsets = multi_subsets
         self.axes_list = [{multi_axis: MdxAxis.empty()} for _ in self.multi_subsets]
         for i, axes in enumerate(self.axes_list):
-            axes[multi_axis].add_set(mdx_set=MdxHierarchySet.tm1_subset_to_set(multi_dimension, multi_hierarchy, multi_subsets[i]))
+            axes[multi_axis].add_set(
+                mdx_set=MdxHierarchySet.tm1_subset_to_set(
+                    multi_dimension,
+                    multi_hierarchy,
+                    multi_subsets[i]))
 
-    def from_cube(cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str], multi_axis: int=1) -> 'MultiMdxBuilder':
+    @staticmethod
+    def from_cube(cube: str, multi_dimension: str, multi_hierarchy: str, multi_subsets: List[str],
+                  multi_axis: int = 1) -> 'MultiMdxBuilder':
         return MultiMdxBuilder(cube, multi_dimension, multi_hierarchy, multi_subsets, multi_axis)
 
     def non_empty(self, axis: int) -> 'MultiMdxBuilder':
@@ -1457,7 +1464,8 @@ class MultiMdxBuilder(MdxBuilder):
             self.axes_list[axes_index][axis].add_set(mdx_set)
         return self
 
-    def _axis_mdx(self, axes_index: int , position: int, head: int = None, tail: int = None, skip_dimension_properties=False):
+    def _axis_mdx(self, axes_index: int, position: int, head: int = None, tail: int = None,
+                  skip_dimension_properties=False):
         axis = self.axes_list[axes_index][position]
         axis_properties = self.axes_properties.get(position, MdxPropertiesTuple.empty())
         if axis.is_empty():
@@ -1488,7 +1496,8 @@ class MultiMdxBuilder(MdxBuilder):
             head_by_axis_position = {0: head_columns, 1: head_rows}
             tail_by_axis_position = {0: tail_columns, 1: tail_rows}
             mdx_axes = ",\r\n".join(
-                self._axis_mdx(axes_index,
+                self._axis_mdx(
+                    axes_index,
                     position,
                     # default for head, tail is False for axes beyond rows and columns
                     head=head_by_axis_position.get(position, None),
@@ -1499,7 +1508,8 @@ class MultiMdxBuilder(MdxBuilder):
 
             mdx_where = "\r\nWHERE " + self._where.to_mdx() if not self._where.is_empty() else ""
 
-            mdx_list.append(f"""{mdx_with if self.calculated_members else ""}SELECT\r\n{mdx_axes}\r\nFROM [{self.cube}]{mdx_where}""")
+            mdx_list.append(
+                f"""{mdx_with if self.calculated_members else ""}SELECT\r\n{mdx_axes}\r\nFROM [{self.cube}]{mdx_where}""")
 
         return mdx_list
 

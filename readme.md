@@ -140,6 +140,29 @@ SELECT
 FROM [CUBE]
 ```
 
+
+### MultiMdxBuilder
+
+The `MultiMdxBuilder` can be used to build a List of MDX queries based on subsets.
+
+``` python
+>>> from mdxpy import MdxHierarchySet, MultiMdxBuilder
+
+>>> query = MultiMdxBuilder.from_cube(
+    cube="Cube",
+    multi_dimension='Month',
+    multi_hierarchy='Month',
+    multi_subsets=['Q1', 'Q2', 'Q3', 'Q4'],
+    multi_axis=1)
+    
+>>> queries = query.add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Product"))
+>>> print(queries)
+['SELECT\r\n{TM1FILTERBYLEVEL({TM1SUBSETALL([product].[product])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n{TM1SUBSETTOSET([month].[month],"Q1")} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\nFROM [cube]', 'SELECT\r\n{TM1FILTERBYLEVEL({TM1SUBSETALL([product].[product])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n{TM1SUBSETTOSET([month].[month],"Q2")} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\nFROM [cube]', 'SELECT\r\n{TM1FILTERBYLEVEL({TM1SUBSETALL([product].[product])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n{TM1SUBSETTOSET([month].[month],"Q3")} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\nFROM [cube]', 'SELECT\r\n{TM1FILTERBYLEVEL({TM1SUBSETALL([product].[product])},0)} DIMENSION PROPERTIES MEMBER_NAME ON 0,\r\n{TM1SUBSETTOSET([month].[month],"Q4")} DIMENSION PROPERTIES MEMBER_NAME ON 1\r\nFROM [cube]']
+```
+
+This can be used to great effect in conjunction with TM1py's `execute_mdx_dataframe_async` function.
+
+
 The `CalculatedMember` class is used to define query-scoped calculated members. They are used with the `MdxBuilder` through the `with_member` function.
 
 ``` python

@@ -77,7 +77,7 @@ class Test(unittest.TestCase):
 
     def test_current_member_of_error(self):
         with pytest.raises(ValueError):
-            CurrentMember.of("Dimension", "Hierarchy","Element")
+            CurrentMember.of("Dimension", "Hierarchy", "Element")
 
     def test_current_member_unique_name_without_hierarchy(self):
         element = CurrentMember.of("Dim")
@@ -152,7 +152,7 @@ class Test(unittest.TestCase):
             "Name",
             "MEMBER_NAME",
             CurrentMember.of("Period", "Period")
-            )
+        )
 
         self.assertEqual(
             calculated_member.to_mdx(),
@@ -371,7 +371,6 @@ class Test(unittest.TestCase):
             "{DRILLDOWNLEVEL(DRILLDOWNLEVEL(DRILLDOWNLEVEL({[dimension].[dimension].[element]})))}",
             hierarchy_set.to_mdx())
 
-
     def test_mdx_hierarchy_set_tm1_drill_down_member_all_recursive(self):
         hierarchy_set = MdxHierarchySet.members([Member.of("dimension", "element")]).tm1_drill_down_member(
             recursive=True)
@@ -466,13 +465,13 @@ class Test(unittest.TestCase):
 
     def test_mdx_filter_by_property_multiple(self):
         hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_property("WEIGHT",
-                                                                                        [ 1, -1])
+                                                                                       [1, -1])
 
         self.assertEqual(
-                "{FILTER({TM1SUBSETALL([dimension].[dimension])},"
-                "[dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')=1 "
-                "OR [dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')=-1)}",
-                hierarchy_set.to_mdx())
+            "{FILTER({TM1SUBSETALL([dimension].[dimension])},"
+            "[dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')=1 "
+            "OR [dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')=-1)}",
+            hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_filter_by_wildcard(self):
         hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_pattern("2011*")
@@ -1131,10 +1130,10 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_columns = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=0) \
+                                                      multi_dimension='MultiDim',
+                                                      multi_hierarchy='MultiDim',
+                                                      multi_subsets=multi_subsets,
+                                                      multi_axis=0) \
             .rows_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .columns_non_empty() \
@@ -1144,10 +1143,10 @@ class Test(unittest.TestCase):
         self.assertIsInstance(multi_mdx_columns, list)
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .rows_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .columns_non_empty() \
@@ -1160,8 +1159,8 @@ class Test(unittest.TestCase):
             mdx_columns = MdxBuilder.from_cube(cube="cube") \
                 .rows_non_empty() \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_to_set(dimension='MultiDim',
-                                                                                 hierarchy='MultiDim',
-                                                                                 subset=subset)) \
+                                                                                    hierarchy='MultiDim',
+                                                                                    subset=subset)) \
                 .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
                 .columns_non_empty() \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
@@ -1185,10 +1184,10 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_columns = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=0) \
+                                                      multi_dimension='MultiDim',
+                                                      multi_hierarchy='MultiDim',
+                                                      multi_subsets=multi_subsets,
+                                                      multi_axis=0) \
             .rows_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .add_properties_to_row_axis(DimensionProperty.of("Dim1", "Code and Name")) \
@@ -1200,10 +1199,10 @@ class Test(unittest.TestCase):
         self.assertIsInstance(multi_mdx_columns, list)
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .rows_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .add_properties_to_row_axis(DimensionProperty.of("Dim1", "Code and Name")) \
@@ -1218,8 +1217,8 @@ class Test(unittest.TestCase):
             mdx_columns = MdxBuilder.from_cube(cube="cube") \
                 .rows_non_empty() \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_to_set(dimension='MultiDim',
-                                                                                 hierarchy='MultiDim',
-                                                                                 subset=subset)) \
+                                                                                    hierarchy='MultiDim',
+                                                                                    subset=subset)) \
                 .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
                 .add_properties_to_row_axis(DimensionProperty.of("Dim1", "Code and Name")) \
                 .columns_non_empty() \
@@ -1247,10 +1246,10 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_columns = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=0) \
+                                                      multi_dimension='MultiDim',
+                                                      multi_hierarchy='MultiDim',
+                                                      multi_subsets=multi_subsets,
+                                                      multi_axis=0) \
             .tm1_ignore_bad_tuples() \
             .rows_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
@@ -1261,10 +1260,10 @@ class Test(unittest.TestCase):
         self.assertIsInstance(multi_mdx_columns, list)
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .tm1_ignore_bad_tuples() \
             .rows_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
@@ -1279,8 +1278,8 @@ class Test(unittest.TestCase):
                 .tm1_ignore_bad_tuples() \
                 .rows_non_empty() \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_to_set(dimension='MultiDim',
-                                                                                 hierarchy='MultiDim',
-                                                                                 subset=subset)) \
+                                                                                    hierarchy='MultiDim',
+                                                                                    subset=subset)) \
                 .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
                 .columns_non_empty() \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
@@ -1305,19 +1304,19 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_columns = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=0) \
+                                                      multi_dimension='MultiDim',
+                                                      multi_hierarchy='MultiDim',
+                                                      multi_subsets=multi_subsets,
+                                                      multi_axis=0) \
             .add_hierarchy_set_to_axis(0, MdxHierarchySet.member(Member.of("Dim1", "Elem1"))) \
             .to_mdx()
         self.assertIsInstance(multi_mdx_columns, list)
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .add_hierarchy_set_to_axis(0, MdxHierarchySet.member(Member.of("Dim1", "Elem1"))) \
             .to_mdx()
         self.assertIsInstance(multi_mdx_rows, list)
@@ -1325,8 +1324,8 @@ class Test(unittest.TestCase):
         for i, subset in enumerate(multi_subsets):
             mdx_columns = MdxBuilder.from_cube(cube="cube") \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_to_set(dimension='MultiDim',
-                                                                                 hierarchy='MultiDim',
-                                                                                 subset=subset)) \
+                                                                                    hierarchy='MultiDim',
+                                                                                    subset=subset)) \
                 .add_hierarchy_set_to_axis(0, MdxHierarchySet.member(Member.of("Dim1", "Elem1"))) \
                 .to_mdx()
             self.assertEqual(multi_mdx_columns[i], mdx_columns)
@@ -1367,10 +1366,10 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .with_member(
             CalculatedMember.avg(
                 dimension="Period",
@@ -1414,10 +1413,10 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .with_member(
             CalculatedMember.avg(
                 dimension="Period",
@@ -1463,10 +1462,10 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .with_member(
             CalculatedMember.avg(
                 dimension="Period",
@@ -1530,10 +1529,10 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_columns = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=0) \
+                                                      multi_dimension='MultiDim',
+                                                      multi_hierarchy='MultiDim',
+                                                      multi_subsets=multi_subsets,
+                                                      multi_axis=0) \
             .rows_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .columns_non_empty() \
@@ -1543,10 +1542,10 @@ class Test(unittest.TestCase):
         self.assertIsInstance(multi_mdx_columns, list)
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .rows_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .columns_non_empty() \
@@ -1558,8 +1557,8 @@ class Test(unittest.TestCase):
         for i, subset in enumerate(multi_subsets):
             mdx_columns = MdxBuilder.from_cube(cube="cube") \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_to_set(dimension='MultiDim',
-                                                                                 hierarchy='MultiDim',
-                                                                                 subset=subset)) \
+                                                                                    hierarchy='MultiDim',
+                                                                                    subset=subset)) \
                 .rows_non_empty() \
                 .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim1")) \
                 .columns_non_empty() \
@@ -1584,10 +1583,10 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_columns = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=0) \
+                                                      multi_dimension='MultiDim',
+                                                      multi_hierarchy='MultiDim',
+                                                      multi_subsets=multi_subsets,
+                                                      multi_axis=0) \
             .add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .columns_non_empty() \
             .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
@@ -1596,10 +1595,10 @@ class Test(unittest.TestCase):
         self.assertIsInstance(multi_mdx_columns, list)
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .columns_non_empty() \
             .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
@@ -1610,8 +1609,8 @@ class Test(unittest.TestCase):
         for i, subset in enumerate(multi_subsets):
             mdx_columns = MdxBuilder.from_cube(cube="cube") \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_to_set(dimension='MultiDim',
-                                                                                 hierarchy='MultiDim',
-                                                                                 subset=subset)) \
+                                                                                    hierarchy='MultiDim',
+                                                                                    subset=subset)) \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Dim1")) \
                 .columns_non_empty() \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.member(Member.of("Dim2", "Elem2"))) \
@@ -1634,10 +1633,10 @@ class Test(unittest.TestCase):
         multi_subsets = ['Subset1', 'Subset2', 'Subset3']
 
         multi_mdx_columns = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=0) \
+                                                      multi_dimension='MultiDim',
+                                                      multi_hierarchy='MultiDim',
+                                                      multi_subsets=multi_subsets,
+                                                      multi_axis=0) \
             .add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .columns_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim2")) \
@@ -1647,10 +1646,10 @@ class Test(unittest.TestCase):
         self.assertIsInstance(multi_mdx_columns, list)
 
         multi_mdx_rows = MultiMdxBuilder.from_cube(cube="cube",
-                                              multi_dimension='MultiDim',
-                                              multi_hierarchy='MultiDim',
-                                              multi_subsets=multi_subsets,
-                                              multi_axis=1) \
+                                                   multi_dimension='MultiDim',
+                                                   multi_hierarchy='MultiDim',
+                                                   multi_subsets=multi_subsets,
+                                                   multi_axis=1) \
             .add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Dim1")) \
             .columns_non_empty() \
             .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim2")) \
@@ -1662,8 +1661,8 @@ class Test(unittest.TestCase):
         for i, subset in enumerate(multi_subsets):
             mdx_columns = MdxBuilder.from_cube(cube="cube") \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.tm1_subset_to_set(dimension='MultiDim',
-                                                                                 hierarchy='MultiDim',
-                                                                                 subset=subset)) \
+                                                                                    hierarchy='MultiDim',
+                                                                                    subset=subset)) \
                 .add_hierarchy_set_to_column_axis(MdxHierarchySet.all_leaves("Dim1")) \
                 .columns_non_empty() \
                 .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_leaves("Dim2")) \
