@@ -3,7 +3,7 @@ import unittest
 import pytest
 
 from mdxpy import DimensionProperty, Member, MdxTuple, MdxHierarchySet, normalize, MdxBuilder, CalculatedMember, MdxSet, \
-    Order, ElementType, MdxLevelExpression, MultiMdxBuilder
+    Order, ElementType, MdxLevelExpression, MultiMdxBuilder, CurrentMember
 
 
 class Test(unittest.TestCase):
@@ -54,6 +54,42 @@ class Test(unittest.TestCase):
     def test_member_unique_name_with_hierarchy(self):
         element = Member.of("Dim", "Hier", "Elem")
         self.assertEqual(element.unique_name, "[dim].[hier].[elem]")
+
+    def test_current_member_of_one_arg_mdx(self):
+        dimension_element = CurrentMember.of("[Dimension].CurrentMember")
+        self.assertEqual(dimension_element.dimension, "Dimension")
+        self.assertEqual(dimension_element.hierarchy, "Dimension")
+
+    def test_current_member_of_one_arg_with_hierarchy(self):
+        dimension_element = CurrentMember.of("[Dimension].[Hierarchy].CurrentMember")
+        self.assertEqual(dimension_element.dimension, "Dimension")
+        self.assertEqual(dimension_element.hierarchy, "Hierarchy")
+
+    def test_current_member_of_one_arg(self):
+        dimension_element = CurrentMember.of("Dimension")
+        self.assertEqual(dimension_element.dimension, "Dimension")
+        self.assertEqual(dimension_element.hierarchy, "Dimension")
+
+    def test_current_member_of_two_arguments(self):
+        dimension_element = CurrentMember.of("Dimension", "Hierarchy")
+        self.assertEqual(dimension_element.dimension, "Dimension")
+        self.assertEqual(dimension_element.hierarchy, "Hierarchy")
+
+    def test_current_member_of_error(self):
+        with pytest.raises(ValueError):
+            CurrentMember.of("Dimension", "Hierarchy","Element")
+
+    def test_current_member_unique_name_without_hierarchy(self):
+        element = CurrentMember.of("Dim")
+        self.assertEqual(element.unique_name, "[dim].[dim].CURRENTMEMBER")
+
+    def test_current_member_unique_name_with_hierarchy(self):
+        element = CurrentMember.of("Dim", "Hier")
+        self.assertEqual(element.unique_name, "[dim].[hier].CURRENTMEMBER")
+
+    def test_current_member_unique_name_with_hierarchy_spaces(self):
+        element = CurrentMember.of("Dimension Name", "Hierarchy Name")
+        self.assertEqual(element.unique_name, "[dimensionname].[hierarchyname].CURRENTMEMBER")
 
     def test_calculated_member_avg(self):
         calculated_member = CalculatedMember.avg(
@@ -108,6 +144,57 @@ class Test(unittest.TestCase):
             calculated_member.to_mdx(),
             "MEMBER [period].[period].[versionattribute1] AS [}elementattributes_version]."
             "([}elementattributes_version].[}elementattributes_version].[attribute1])")
+
+    def test_calculated_property_lookup_current_member(self):
+        calculated_member = CalculatedMember.lookup_property(
+            "Period",
+            "Period",
+            "Name",
+            "MEMBER_NAME",
+            CurrentMember.of("Period", "Period")
+            )
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [period].[period].[name] AS [period].[period].CURRENTMEMBER.PROPERTIES('MEMBER_NAME')")
+
+    def test_calculated_property_lookup_current_member_typed(self):
+        calculated_member = CalculatedMember.lookup_property(
+            "Period",
+            "Period",
+            "Name",
+            "MEMBER_NAME",
+            CurrentMember.of("Period", "Period"),
+            typed=True)
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [period].[period].[name] AS [period].[period].CURRENTMEMBER.PROPERTIES('MEMBER_NAME', TYPED)")
+
+    def test_calculated_property_lookup_element(self):
+        calculated_member = CalculatedMember.lookup_property(
+            "Period",
+            "Period",
+            "Name",
+            "MEMBER_NAME",
+            Member.of("Period", "Jan"))
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [period].[period].[name] AS [period].[period].[jan].PROPERTIES('MEMBER_NAME')")
+
+    def test_calculated_property_lookup_element_typed(self):
+        calculated_member = CalculatedMember.lookup_property(
+            "Period",
+            "Period",
+            "Name",
+            "WEIGHT",
+            Member.of("Period", "Jan"),
+            True)
+
+        self.assertEqual(
+            calculated_member.to_mdx(),
+            "MEMBER [period].[period].[name] AS [period].[period].[jan].PROPERTIES('WEIGHT', TYPED)")
 
     def test_mdx_tuple_empty(self):
         tupl = MdxTuple.empty()
@@ -216,7 +303,6 @@ class Test(unittest.TestCase):
             " * {[dimension].[dimension].[element3]}}",
             mdx_set.to_mdx())
 
-
     def test_mdx_set_tuples(self):
         mdx_set = MdxSet.tuples([
             MdxTuple([Member.of("dimension1", "element1"), Member.of("dimension2", "element3")]),
@@ -273,11 +359,18 @@ class Test(unittest.TestCase):
             hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_drill_down_level(self):
-        hierarchy_set = MdxHierarchySet.drill_down_level(Member.of("Dimension", "Element"))
+        hierarchy_set = MdxHierarchySet.drill_down_level(Member.of("Dimension", "Element"), level=1)
 
         self.assertEqual(
             "{DRILLDOWNLEVEL({[dimension].[dimension].[element]})}",
             hierarchy_set.to_mdx())
+
+        hierarchy_set = MdxHierarchySet.drill_down_level(Member.of("Dimension", "Element"), level=3)
+
+        self.assertEqual(
+            "{DRILLDOWNLEVEL(DRILLDOWNLEVEL(DRILLDOWNLEVEL({[dimension].[dimension].[element]})))}",
+            hierarchy_set.to_mdx())
+
 
     def test_mdx_hierarchy_set_tm1_drill_down_member_all_recursive(self):
         hierarchy_set = MdxHierarchySet.members([Member.of("dimension", "element")]).tm1_drill_down_member(
@@ -354,6 +447,32 @@ class Test(unittest.TestCase):
             '[}ELEMENTATTRIBUTES_dimension].([}ELEMENTATTRIBUTES_dimension].[Attribute1])=1 OR '
             '[}ELEMENTATTRIBUTES_dimension].([}ELEMENTATTRIBUTES_dimension].[Attribute1])=2.0)}',
             hierarchy_set.to_mdx())
+
+    def test_mdx_filter_by_property_single_string(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_property("Member_Name", ["Element1"])
+        self.assertEqual(
+            "{FILTER({TM1SUBSETALL([dimension].[dimension])},"
+            "[dimension].[dimension].CURRENTMEMBER.PROPERTIES('Member_Name')"
+            '="Element1")}',
+            hierarchy_set.to_mdx())
+
+    def test_mdx_filter_by_property_single_numeric(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_property("WEIGHT", [1])
+        self.assertEqual(
+            "{FILTER({TM1SUBSETALL([dimension].[dimension])},"
+            "[dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')"
+            '=1)}',
+            hierarchy_set.to_mdx())
+
+    def test_mdx_filter_by_property_multiple(self):
+        hierarchy_set = MdxHierarchySet.tm1_subset_all("Dimension").filter_by_property("WEIGHT",
+                                                                                        [ 1, -1])
+
+        self.assertEqual(
+                "{FILTER({TM1SUBSETALL([dimension].[dimension])},"
+                "[dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')=1 "
+                "OR [dimension].[dimension].CURRENTMEMBER.PROPERTIES('WEIGHT')=-1)}",
+                hierarchy_set.to_mdx())
 
     def test_mdx_hierarchy_set_filter_by_wildcard(self):
         hierarchy_set = MdxHierarchySet.all_members("Dimension", "Hierarchy").filter_by_pattern("2011*")

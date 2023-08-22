@@ -1,9 +1,57 @@
 import os
-from abc import abstractmethod
+from abc import abstractmethod, ABC
+from typing import Optional
 from enum import Enum
 from typing import List, Optional, Union, Iterable
+import re
 
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
+
+
+class MdxMember(ABC):
+    """ Represents an MDX Member Expression Object"""
+
+    @staticmethod
+    def of(*args, **kwargs) -> 'MdxMember':
+        """
+        Create MDX Member based on parameters
+        """
+
+    @classmethod
+    def build_unique_name(cls, *args, **kwargs) -> str:
+        """
+        Construct MDX Member Unique Name
+        """
+
+    @staticmethod
+    def from_unique_name(unique_name: str) -> 'MdxMember':
+        """
+        Build Member from input parameters
+        """
+
+    @staticmethod
+    def dimension_name_from_unique_name(unique_name: str) -> str:
+        """
+        Get dimension name from MDX statement
+        """
+
+    @staticmethod
+    def hierarchy_name_from_unique_name(unique_name: str) -> str:
+        """
+        Get hierarchy from mdx statement
+        """
+
+    @staticmethod
+    def element_name_from_unique_name(element_unique_name: str) -> str:
+        """
+        Get element name from mdx statement
+        """
+
+    def __eq__(self, other) -> bool:
+        pass
+
+    def __hash__(self):
+        pass
 
 
 class DescFlag(Enum):
@@ -69,7 +117,61 @@ def normalize(name: str) -> str:
     return name.lower().replace(" ", "").replace("]", "]]")
 
 
-class Member:
+class CurrentMember(MdxMember):
+    SHORT_NOTATION = False
+
+    def __init__(self, dimension: str, hierarchy: str):
+        self.dimension = dimension
+        self.hierarchy = hierarchy
+        self.unique_name = self.build_unique_name(dimension, hierarchy)
+
+    @classmethod
+    def build_unique_name(cls, dimension, hierarchy) -> str:
+        if cls.SHORT_NOTATION and dimension == hierarchy:
+            return f"[{normalize(dimension)}].CURRENTMEMBER"
+        return f"[{normalize(dimension)}].[{normalize(hierarchy)}].CURRENTMEMBER"
+
+    @staticmethod
+    def from_unique_name(unique_name: str) -> 'CurrentMember':
+        dimension = CurrentMember.dimension_name_from_unique_name(unique_name)
+        if unique_name.count("].") == 1:
+            return CurrentMember(dimension, dimension)
+        elif unique_name.count("].") == 2:
+            hierarchy = CurrentMember.hierarchy_name_from_unique_name(unique_name)
+            return CurrentMember(dimension, hierarchy)
+        else:
+            raise ValueError(f"Argument '{unique_name}' must be a valid member unique name")
+
+    @staticmethod
+    def of(*args: str) -> 'CurrentMember':
+        # case: '[dim].[elem]'
+        if len(args) == 1:
+            pattern = re.compile(r"\[(.*?)+\]\.", re.IGNORECASE)
+            if re.search(pattern=pattern, string=args[0]):
+                return CurrentMember.from_unique_name(args[0])
+            else:
+                return CurrentMember(args[0], args[0])
+        elif len(args) == 2:
+            return CurrentMember(args[0], args[1])
+        else:
+            raise ValueError("method takes either one, two or three str arguments")
+
+    @staticmethod
+    def dimension_name_from_unique_name(unique_name: str) -> str:
+        return unique_name[1:unique_name.find('].')]
+
+    @staticmethod
+    def hierarchy_name_from_unique_name(unique_name: str) -> str:
+        return unique_name[unique_name.find('].[') + 3:unique_name.rfind('].')]
+
+    def __eq__(self, other) -> bool:
+        return self.unique_name == other.unique_name
+
+    def __hash__(self):
+        return hash(self.unique_name)
+
+
+class Member(MdxMember):
     # control if full element unique name is used for members without explicit hierarchy
     SHORT_NOTATION = False
 
@@ -189,6 +291,14 @@ class CalculatedMember(Member):
     def lookup_attribute(dimension: str, hierarchy: str, element: str, attribute_dimension: str, attribute: str):
         attribute_cube = ELEMENT_ATTRIBUTE_PREFIX + attribute_dimension.lower()
         calculation = f"[{attribute_cube}].([{attribute_cube}].[{attribute.lower()}])"
+        return CalculatedMember(dimension, hierarchy, element, calculation)
+
+    @staticmethod
+    def lookup_property(dimension: str, hierarchy: str, element: str, property_name: str,
+                        member_lookup: Member | CurrentMember,
+                        typed: bool = False):
+        typed_argument = ", TYPED" if typed else ""
+        calculation = f"{member_lookup.unique_name}.PROPERTIES('{property_name}'{typed_argument})"
         return CalculatedMember(dimension, hierarchy, element, calculation)
 
     def to_mdx(self):
@@ -462,10 +572,10 @@ class MdxHierarchySet(MdxSet):
         return AncestorHierarchySet(member, ancestor)
 
     @staticmethod
-    def drill_down_level(member: Union[str, Member]) -> 'MdxHierarchySet':
+    def drill_down_level(member: Union[str, Member], level: int) -> 'MdxHierarchySet':
         if isinstance(member, str):
             member = Member.of(member)
-        return DrillDownLevelHierarchySet(member)
+        return DrillDownLevelHierarchySet(member, level)
 
     @staticmethod
     def descendants(member: Union[str, Member], level_or_depth: Union[MdxLevelExpression, int] = None,
@@ -493,6 +603,10 @@ class MdxHierarchySet(MdxSet):
     def filter_by_attribute(self, attribute_name: str, attribute_values: List,
                             operator: Optional[str] = '=') -> 'MdxHierarchySet':
         return FilterByAttributeHierarchySet(self, attribute_name, attribute_values, operator)
+
+    def filter_by_property(self, property_name: str, property_values: List,
+                           operator: Optional[str] = '=', typed: Optional[bool] = False) -> 'MdxHierarchySet':
+        return FilterByPropertyHierarchySet(self, property_name, property_values, operator, typed)
 
     def filter_by_pattern(self, wildcard: str) -> 'MdxHierarchySet':
         return Tm1FilterByPattern(self, wildcard)
@@ -700,12 +814,19 @@ class Tm1DrillDownMemberSet(MdxHierarchySet):
 
 class DrillDownLevelHierarchySet(MdxHierarchySet):
 
-    def __init__(self, member: Member):
+    def __init__(self, member: Member, level: int =1):
         super(DrillDownLevelHierarchySet, self).__init__(member.dimension, member.hierarchy)
         self.member = member
+        self.level = level
 
     def to_mdx(self) -> str:
-        return f"{{DRILLDOWNLEVEL({{{self.member.unique_name}}})}}"
+        startstring = ''
+        endstring = ''
+        for _ in range(self.level):
+            startstring += 'DRILLDOWNLEVEL('
+            endstring += ')'
+            
+        return f"{{{startstring}{{{self.member.unique_name}}}{endstring}}}"
 
 
 class DescendantsHierarchySet(MdxHierarchySet):
@@ -754,6 +875,37 @@ class StrHierarchySet(MdxHierarchySet):
 
     def to_mdx(self) -> str:
         return self._mdx
+
+
+class FilterByPropertyHierarchySet(MdxHierarchySet):
+
+    def __init__(self, underlying_hierarchy_set: MdxHierarchySet, property_name: str,
+                 property_values: List,
+                 operator: str = '=', typed: bool = False):
+        super(FilterByPropertyHierarchySet, self).__init__(underlying_hierarchy_set.dimension,
+                                                           underlying_hierarchy_set.hierarchy)
+        self.underlying_hierarchy_set = underlying_hierarchy_set
+        self.property_name = property_name
+        self.property_values = property_values
+        self.operator = operator
+        self.typed = typed
+
+    def to_mdx(self) -> str:
+        typed_argument = ", TYPED" if self.typed else ""
+        current_member = CurrentMember.of(self.underlying_hierarchy_set.dimension,
+                                          self.underlying_hierarchy_set.hierarchy)
+        property_mdx = f"{current_member.unique_name}.PROPERTIES('{self.property_name}'{typed_argument})"
+
+        adjusted_values = [f'"{value}"' if isinstance(value, str) else value
+                           for value
+                           in self.property_values]
+
+        mdx_filter = " OR ".join(
+            f"{property_mdx}{self.operator}{value}"
+            for value
+            in adjusted_values)
+
+        return f"{{FILTER({self.underlying_hierarchy_set.to_mdx()},{mdx_filter})}}"
 
 
 class FilterByAttributeHierarchySet(MdxHierarchySet):
