@@ -1,30 +1,39 @@
 import os
+import re
 from abc import abstractmethod, ABC
-from typing import Optional
 from enum import Enum
 from typing import List, Optional, Union, Iterable
-import re
 
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
 
 
-class MdxMember(ABC):
-    """ Represents an MDX Member Expression Object"""
+class _Member(ABC):
+    """ Parent class for MDX Member Expression Object"""
+    # control if full element unique name is used for members without explicit hierarchy
+    SHORT_NOTATION = False
+
+    @property
+    @abstractmethod
+    def unique_name(self):
+        pass
 
     @staticmethod
-    def of(*args, **kwargs) -> 'MdxMember':
+    @abstractmethod
+    def of(*args, **kwargs) -> '_Member':
         """
-        Create MDX Member based on parameters
+        Create Member based on parameters
         """
 
     @classmethod
+    @abstractmethod
     def build_unique_name(cls, *args, **kwargs) -> str:
         """
-        Construct MDX Member Unique Name
+        Construct Member Unique Name
         """
 
     @staticmethod
-    def from_unique_name(unique_name: str) -> 'MdxMember':
+    @abstractmethod
+    def from_unique_name(unique_name: str) -> '_Member':
         """
         Build Member from input parameters
         """
@@ -34,24 +43,20 @@ class MdxMember(ABC):
         """
         Get dimension name from MDX statement
         """
+        return unique_name[1:unique_name.find('].')]
 
     @staticmethod
     def hierarchy_name_from_unique_name(unique_name: str) -> str:
         """
         Get hierarchy from mdx statement
         """
-
-    @staticmethod
-    def element_name_from_unique_name(element_unique_name: str) -> str:
-        """
-        Get element name from mdx statement
-        """
+        return unique_name[unique_name.find('].[') + 3:unique_name.rfind('].')]
 
     def __eq__(self, other) -> bool:
-        pass
+        return self.unique_name == other.unique_name
 
     def __hash__(self):
-        pass
+        return hash(self.unique_name)
 
 
 class DescFlag(Enum):
@@ -117,13 +122,22 @@ def normalize(name: str) -> str:
     return name.lower().replace(" ", "").replace("]", "]]")
 
 
-class CurrentMember(MdxMember):
-    SHORT_NOTATION = False
+class CurrentMember(_Member):
 
     def __init__(self, dimension: str, hierarchy: str):
         self.dimension = dimension
         self.hierarchy = hierarchy
-        self.unique_name = self.build_unique_name(dimension, hierarchy)
+        self._unique_name = None
+
+    @property
+    def unique_name(self):
+        if not self._unique_name:
+            self._unique_name = self.build_unique_name(self.dimension, self.hierarchy)
+        return self._unique_name
+
+    @unique_name.setter
+    def unique_name(self):
+        return self._unique_name
 
     @classmethod
     def build_unique_name(cls, dimension, hierarchy) -> str:
@@ -144,7 +158,7 @@ class CurrentMember(MdxMember):
 
     @staticmethod
     def of(*args: str) -> 'CurrentMember':
-        # case: '[dim].[elem]'
+        # case: '[dim].[hier]' or '[dim].[dim]'
         if len(args) == 1:
             pattern = re.compile(r"\[(.*?)+\]\.", re.IGNORECASE)
             if re.search(pattern=pattern, string=args[0]):
@@ -156,30 +170,24 @@ class CurrentMember(MdxMember):
         else:
             raise ValueError("method takes either one, two or three str arguments")
 
-    @staticmethod
-    def dimension_name_from_unique_name(unique_name: str) -> str:
-        return unique_name[1:unique_name.find('].')]
 
-    @staticmethod
-    def hierarchy_name_from_unique_name(unique_name: str) -> str:
-        return unique_name[unique_name.find('].[') + 3:unique_name.rfind('].')]
-
-    def __eq__(self, other) -> bool:
-        return self.unique_name == other.unique_name
-
-    def __hash__(self):
-        return hash(self.unique_name)
-
-
-class Member(MdxMember):
-    # control if full element unique name is used for members without explicit hierarchy
-    SHORT_NOTATION = False
+class Member(_Member):
 
     def __init__(self, dimension: str, hierarchy: str, element: str):
         self.dimension = dimension
         self.hierarchy = hierarchy
         self.element = element
-        self.unique_name = self.build_unique_name(dimension, hierarchy, element)
+        self._unique_name = None
+
+    @property
+    def unique_name(self):
+        if not self._unique_name:
+            self._unique_name = self.build_unique_name(self.dimension, self.hierarchy, self.element)
+        return self._unique_name
+
+    @unique_name.setter
+    def unique_name(self):
+        return self._unique_name
 
     @classmethod
     def build_unique_name(cls, dimension, hierarchy, element) -> str:
@@ -214,10 +222,6 @@ class Member(MdxMember):
             raise ValueError("method takes either one, two or three str arguments")
 
     @staticmethod
-    def dimension_name_from_unique_name(element_unique_name: str) -> str:
-        return element_unique_name[1:element_unique_name.find('].[')]
-
-    @staticmethod
     def hierarchy_name_from_unique_name(element_unique_name: str) -> str:
         return element_unique_name[element_unique_name.find('].[') + 3:element_unique_name.rfind('].[')]
 
@@ -225,15 +229,8 @@ class Member(MdxMember):
     def element_name_from_unique_name(element_unique_name: str) -> str:
         return element_unique_name[element_unique_name.rfind('].[') + 3:-1]
 
-    def __eq__(self, other) -> bool:
-        return self.unique_name == other.unique_name
-
-    def __hash__(self):
-        return hash(self.unique_name)
-
 
 class DimensionProperty(Member):
-    SHORT_NOTATION = False
 
     def __init__(self, dimension: str, hierarchy: str, attribute: str):
         super(DimensionProperty, self).__init__(dimension, hierarchy, attribute)
@@ -814,7 +811,7 @@ class Tm1DrillDownMemberSet(MdxHierarchySet):
 
 class DrillDownLevelHierarchySet(MdxHierarchySet):
 
-    def __init__(self, member: Member, level: int =1):
+    def __init__(self, member: Member, level: int = 1):
         super(DrillDownLevelHierarchySet, self).__init__(member.dimension, member.hierarchy)
         self.member = member
         self.level = level
@@ -825,7 +822,7 @@ class DrillDownLevelHierarchySet(MdxHierarchySet):
         for _ in range(self.level):
             startstring += 'DRILLDOWNLEVEL('
             endstring += ')'
-            
+
         return f"{{{startstring}{{{self.member.unique_name}}}{endstring}}}"
 
 
