@@ -8,29 +8,36 @@ import re
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
 
 
-class MdxMember(ABC):
-    """ Represents an MDX Member Expression Object"""
+class _Member(ABC):
+    """ Parent class for MDX Member Expression Object"""
+    # control if full element unique name is used for members without explicit hierarchy
+    SHORT_NOTATION = False
+
+    @property
+    @abstractmethod
+    def unique_name(self):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def build_hierarchy_unique_name(cls, *args, **kwargs) -> str:
+        """
+        Construct MDX Member Unique Name
+
+        """
 
     @staticmethod
-    def of(*args, **kwargs) -> 'MdxMember':
+    @abstractmethod
+    def of(*args, **kwargs) -> '_Member':
         """
-        Create MDX Member based on parameters
+        Create Member based on parameters
         """
 
     @classmethod
     @abstractmethod
     def build_unique_name(cls, *args, **kwargs) -> str:
         """
-        Construct MDX Member Unique Name
-
-        """
-
-    @classmethod
-    @abstractmethod
-    def build_hierachy_unique_name(cls, *args, **kwargs) -> str:
-        """
-        Construct MDX Member Unique Name
-
+        Construct Member Unique Name
         """
 
     @staticmethod
