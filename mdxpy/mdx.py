@@ -1289,9 +1289,10 @@ class MdxBuilder:
             for tuple in self.axes[axis_number].tuples:
                 for hierarchy in tuple.members:
                     composition.append(hierarchy.hierarchy_unique_name)
-        elif self.axes[axis_number].dim_sets:
+        if self.axes[axis_number].dim_sets:
             for set in self.axes[axis_number].dim_sets:
                 composition.append(set.hierarchy_unique_name)
+
         return composition
 
     def get_composition(self):
