@@ -1,34 +1,36 @@
 import os
-import re
 from abc import abstractmethod, ABC
+from typing import Optional
 from enum import Enum
 from typing import List, Optional, Union, Iterable
+import re
 
 ELEMENT_ATTRIBUTE_PREFIX = "}ELEMENTATTRIBUTES_"
 
 
-class _Member(ABC):
-    """ Parent class for MDX Member Expression Object"""
-    # control if full element unique name is used for members without explicit hierarchy
-    SHORT_NOTATION = False
-
-    @property
-    @abstractmethod
-    def unique_name(self):
-        pass
+class MdxMember(ABC):
+    """ Represents an MDX Member Expression Object"""
 
     @staticmethod
-    @abstractmethod
-    def of(*args, **kwargs) -> '_Member':
+    def of(*args, **kwargs) -> 'MdxMember':
         """
-        Create Member based on parameters
+        Create MDX Member based on parameters
         """
 
     @classmethod
     @abstractmethod
     def build_unique_name(cls, *args, **kwargs) -> str:
         """
-        Construct Member Unique Name
+        Construct MDX Member Unique Name
+
+        """
+
+    @classmethod
+    @abstractmethod
+    def build_hierachy_unique_name(cls, *args, **kwargs) -> str:
+        """
+        Construct MDX Member Unique Name
+
         """
 
     @staticmethod
@@ -176,6 +178,7 @@ class Member(_Member):
     def __init__(self, dimension: str, hierarchy: str, element: str):
         self.dimension = dimension
         self.hierarchy = hierarchy
+        self.hierarchy_unique_name = self.build_hierarchy_unique_name(dimension, hierarchy)
         self.element = element
         self._unique_name = None
 
@@ -194,6 +197,12 @@ class Member(_Member):
         if cls.SHORT_NOTATION and dimension == hierarchy:
             return f"[{normalize(dimension)}].[{normalize(element)}]"
         return f"[{normalize(dimension)}].[{normalize(hierarchy)}].[{normalize(element)}]"
+
+    @classmethod
+    def build_hierarchy_unique_name(cls, dimension, hierarchy) -> str:
+        if cls.SHORT_NOTATION and dimension == hierarchy:
+            return f"[{normalize(dimension)}]"
+        return f"[{normalize(dimension)}].[{normalize(hierarchy)}]"
 
     @staticmethod
     def from_unique_name(unique_name: str) -> 'Member':
@@ -423,6 +432,9 @@ class MdxPropertiesTuple:
 
 class MdxSet:
 
+    def __init__(self):
+        self.hierarchy_unique_name = None
+
     @abstractmethod
     def to_mdx(self) -> str:
         pass
@@ -479,6 +491,11 @@ class MdxHierarchySet(MdxSet):
     def __init__(self, dimension: str, hierarchy: Optional[str] = None):
         self.dimension = normalize(dimension)
         self.hierarchy = normalize(hierarchy) if hierarchy else self.dimension
+        self.hierarchy_unique_name = self.build_hierarchy_unique_name(dimension, hierarchy)
+
+    @classmethod
+    def build_hierarchy_unique_name(cls, dimension, hierarchy) -> str:
+        return f"[{normalize(dimension)}].[{normalize(hierarchy)}]"
 
     def to_clipboard(self):
         mdx = self.to_mdx()
@@ -1258,6 +1275,28 @@ class MdxBuilder:
         self.axes_properties = {0: MdxPropertiesTuple.empty()}
         self.calculated_members = list()
         self._tm1_ignore_bad_tuples = False
+
+    def get_axis_composition(self, axis_number):
+        composition = []
+        if self.axes[axis_number].tuples:
+            for tuple in self.axes[axis_number].tuples:
+                for hierarchy in tuple.members:
+                    composition.append(hierarchy.hierarchy_unique_name)
+        elif self.axes[axis_number].dim_sets:
+            for set in self.axes[axis_number].dim_sets:
+                composition.append(set.hierarchy_unique_name)
+        return composition
+
+    def get_composition(self):
+        titles, rows, columns = [], [], []
+        #titles
+        titles = [hierarchy.hierarchy_unique_name for hierarchy in self._where.members]
+        #columns
+        columns = self.get_axis_composition(0)
+        #rows
+        rows = self.get_axis_composition(1)
+
+        return self.cube, titles, rows, columns
 
     @staticmethod
     def from_cube(cube: str) -> 'MdxBuilder':
