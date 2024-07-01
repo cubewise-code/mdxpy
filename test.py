@@ -1682,3 +1682,50 @@ class Test(unittest.TestCase):
                 .where(Member.of("Dim3", "Elem3"), Member.of("Dim4", "Elem4")) \
                 .to_mdx(head_columns=4, tail_columns=2, head_rows=2, tail_rows=1)
             self.assertEqual(multi_mdx_rows[i], mdx_rows)
+
+    def test_get_composition_tuples(self):
+        mdx = MdxBuilder.from_cube(cube="Cube")\
+            .rows_non_empty() \
+            .add_member_tuple_to_rows(MdxTuple.of(Member.of("Dim1", "Total Dim1"), Member.of("Dim2", "Total Dim2")))\
+            .columns_non_empty() \
+            .add_member_tuple_to_columns(Member.of("Period", "AVG 2016")) \
+            .where("[Dim3].[Total Dim3]")
+
+
+        composition = ('cube', ['[dim3].[dim3]'], ['[dim1].[dim1]', '[dim2].[dim2]'], ['[period].[period]'])
+        self.assertEqual(composition, mdx.get_composition())
+
+
+    def test_get_composition_sets(self):
+        mdx = MdxBuilder.from_cube(cube="Cube") \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_members('dim1', 'dim1')) \
+            .columns_non_empty() \
+            .add_hierarchy_set_to_column_axis(MdxHierarchySet.all_members('period', 'period')) \
+            .where("[Dim3].[Total Dim3]")
+
+        composition = ('cube', ['[dim3].[dim3]'], ['[dim1].[dim1]'], ['[period].[period]'])
+        self.assertEqual(composition, mdx.get_composition())
+
+    def test_get_composition_sets_and_tuples(self):
+        mdx = (MdxBuilder.from_cube(cube="Cube") \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_members('dim1', 'dim1')) \
+            .columns_non_empty() \
+            .add_member_tuple_to_columns(Member.of("Period", "AVG 2016")) \
+            .where("[Dim3].[Total Dim3]"))
+
+        composition = ('cube', ['[dim3].[dim3]'], ['[dim1].[dim1]'], ['[period].[period]'])
+        self.assertEqual(composition, mdx.get_composition())
+
+    def test_get_composition_no_where_clause(self):
+        mdx = (MdxBuilder.from_cube(cube="Cube") \
+            .rows_non_empty() \
+            .add_hierarchy_set_to_row_axis(MdxHierarchySet.all_members('dim1', 'dim1')) \
+            .columns_non_empty() \
+            .add_member_tuple_to_columns(Member.of("Period", "AVG 2016")))
+
+        composition = ('cube', [], ['[dim1].[dim1]'], ['[period].[period]'])
+        self.assertEqual(composition, mdx.get_composition())
+
+
