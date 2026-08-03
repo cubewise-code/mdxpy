@@ -1378,6 +1378,16 @@ class MdxBuilder:
         self.axes[axis].add_set(mdx_set)
         return self
 
+    def add_sets_to_axis(self, axis: int, mdx_sets: MdxSet | Iterable[MdxSet]) -> 'MdxBuilder':
+        mdx_sets = (mdx_sets,) if isinstance(mdx_sets, MdxSet) else mdx_sets
+
+        if axis not in self.axes:
+            self.axes[axis] = MdxAxis.empty()
+        
+        for mdx_set in mdx_sets:
+            self.axes[axis].add_set(mdx_set)
+        return self
+
     def add_empty_set_to_axis(self, axis: int):
         if axis in self.axes:
             raise ValueError(f"axis: '{axis}' must be empty")
